@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>買い物計画</title>
+<style>
+:root{--bg:#f5f3ee;--card:#fff;--ink:#1f2a37;--sub:#6b7280;--line:#e5e1d8;--ok:#2f8f5b;--ng:#c8503c;--acc:#2f4b7c;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181f;--card:#1e242d;--ink:#eceff4;--sub:#9aa3b0;--line:#2e3743;--ok:#4cc38a;--ng:#ef7a66;--acc:#8fb0e8}}
+:root[data-theme="dark"]{--bg:#14181f;--card:#1e242d;--ink:#eceff4;--sub:#9aa3b0;--line:#2e3743;--ok:#4cc38a;--ng:#ef7a66;--acc:#8fb0e8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+h1{font-size:20px;margin:8px 0 14px}
+.panel{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.big{font-size:24px;font-weight:700}
+.sub{font-size:13px;color:var(--sub)}
+.bar{height:14px;background:var(--line);border-radius:7px;overflow:hidden;margin:10px 0 8px}
+.fill{height:100%;width:0;background:var(--ok);transition:width .25s,background .25s}
+.fill.over{background:var(--ng)}
+.verdict{font-size:15px;font-weight:600}
+label.budget{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--sub)}
+input{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;min-width:0}
+#budget{width:110px;text-align:right}
+.add{display:flex;gap:8px;margin:16px 0}
+#name{flex:1}#price{width:96px}
+button{font:inherit;font-size:16px;border:0;border-radius:8px;padding:10px 14px;background:var(--acc);color:#fff;cursor:pointer}
+:root:not([data-theme="light"]) button.primary{color:inherit}
+ul{list-style:none;margin:0;padding:0}
+li{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--ok);border-radius:10px;padding:8px 10px 8px 4px;margin-bottom:8px;user-select:none;-webkit-user-select:none}
+li.over{border-left-color:var(--ng)}
+li.over .nm,li.over .pr{opacity:.55}
+li.dragging{box-shadow:0 8px 20px rgba(0,0,0,.25);border-color:var(--acc);position:relative;z-index:3;transform:scale(1.02)}
+.handle{touch-action:none;width:40px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:20px;cursor:grab;flex:none}
+.rank{width:24px;font-weight:700;color:var(--sub);flex:none;text-align:center}
+.mid{flex:1;min-width:0}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.cum{font-size:12px;color:var(--sub)}
+.pr{font-weight:700;white-space:nowrap}
+.del{background:transparent;color:var(--ng);padding:8px 10px;font-size:20px;line-height:1}
+.empty{text-align:center;color:var(--sub);padding:28px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>買い物計画</h1>
+
+<div class="panel">
+  <div class="row">
+    <span class="big" id="total">¥0</span>
+    <label class="budget">予算 ¥<input type="number" id="budget" inputmode="numeric" min="0"></label>
+  </div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="verdict" id="verdict"></div>
+  <div class="sub" id="remain"></div>
+</div>
+
+<div class="add">
+  <input type="text" id="name" placeholder="欲しいもの" maxlength="40">
+  <input type="number" id="price" inputmode="numeric" placeholder="価格" min="0">
+  <button id="addBtn">追加</button>
+</div>
+
+<ul id="list"></ul>
+<div class="sub" style="text-align:center;margin-top:12px">左の「≡」を長押しせずそのままドラッグで並べ替え</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const yen = n => '¥' + n.toLocaleString('ja-JP');
+let items = [], budget = 100000;
+
+try {
+  items = JSON.parse(localStorage.getItem('plannedItems')) || [];
+  const b = parseInt(localStorage.getItem('plannedBudget'));
+  if (!isNaN(b)) budget = b;
+} catch (e) {}
+items = items.filter(i => i && typeof i.name === 'string' && Number.isFinite(i.price))
+             .map((i, k) => ({ id: i.id || Date.now() + '-' + k, name: i.name, price: i.price }));
+$('budget').value = budget;
+
+function save() {
+  try {
+    localStorage.setItem('plannedItems', JSON.stringify(items));
+    localStorage.setItem('plannedBudget', String(budget));
+  } catch (e) {}
+}
+
+// 一覧を作り直す（追加・削除時のみ）
+function render() {
+  const ul = $('list');
+  ul.innerHTML = '';
+  if (!items.length) {
+    ul.innerHTML = '<div class="empty">欲しいものを追加してください</div>';
+  }
+  items.forEach(it => {
+    const li = document.createElement('li');
+    li.dataset.id = it.id;
+    li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え">≡</div>' +
+      '<div class="rank"></div>' +
+      '<div class="mid"><div class="nm"></div><div class="cum"></div></div>' +
+      '<div class="pr"></div>' +
+      '<button class="del" aria-label="削除">×</button>';
+    li.querySelector('.nm').textContent = it.name;
+    li.querySelector('.pr').textContent = yen(it.price);
+    ul.appendChild(li);
+  });
+  refresh();
+}
+
+// 順位・累計・ゲージだけ更新（ドラッグ中もこれだけ呼ぶ）
+function refresh() {
+  const byId = Object.fromEntries(items.map(i => [i.id, i]));
+  let cum = 0, fit = 0;
+  document.querySelectorAll('#list li').forEach((li, k) => {
+    const it = byId[li.dataset.id];
+    cum += it.price;
+    const ok = cum <= budget;
+    if (ok && fit === k) fit = k + 1;
+    li.classList.toggle('over', !ok);
+    li.querySelector('.rank').textContent = k + 1;
+    li.querySelector('.cum').textContent = '累計 ' + yen(cum);
+  });
+  const total = items.reduce((s, i) => s + i.price, 0);
+  $('total').textContent = yen(total);
+  const pct = budget > 0 ? Math.min(total / budget * 100, 100) : (total ? 100 : 0);
+  $('fill').style.width = pct + '%';
+  $('fill').classList.toggle('over', total > budget);
+  $('verdict').textContent = !items.length ? '' : fit === items.length ? `全${fit}件、予算内です`
+    : fit === 0 ? '1位でも予算を超えています' : `予算内で買えるのは ${fit}位 まで`;
+  $('remain').textContent = !items.length ? '' : total <= budget
+    ? `残り ${yen(budget - total)}` : `${yen(total - budget)} 超過`;
+}
+
+function addItem() {
+  const name = $('name').value.trim();
+  const price = parseInt($('price').value, 10);
+  if (!name || isNaN(price) || price < 0) { (name ? $('price') : $('name')).focus(); return; }
+  items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, price });
+  $('name').value = ''; $('price').value = '';
+  save(); render(); $('name').focus();
+}
+$('addBtn').addEventListener('click', addItem);
+['name', 'price'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); }));
+$('budget').addEventListener('input', e => {
+  const v = parseInt(e.target.value, 10);
+  budget = isNaN(v) ? 0 : Math.max(v, 0);
+  save(); refresh();
+});
+
+$('list').addEventListener('click', e => {
+  const btn = e.target.closest('.del');
+  if (!btn) return;
+  const id = btn.closest('li').dataset.id;
+  items = items.filter(i => i.id !== id);
+  save(); render();
+});
+
+// ドラッグ並べ替え：Pointer Events（タッチ・マウス両対応）。つまみ部分のみ touch-action:none なので通常スクロールは妨げない
+let drag = null;
+$('list').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle');
+  if (!h) return;
+  e.preventDefault();
+  const li = h.closest('li');
+  h.setPointerCapture(e.pointerId);
+  li.classList.add('dragging');
+  drag = { li, h, pid: e.pointerId };
+  if (navigator.vibrate) navigator.vibrate(10);
+});
+
+$('list').addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  const { li } = drag, y = e.clientY;
+  const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+  let prev = li.previousElementSibling, next = li.nextElementSibling, moved = false;
+  while (prev && y < mid(prev)) { li.parentNode.insertBefore(li, prev); prev = li.previousElementSibling; moved = true; }
+  while (next && y > mid(next)) { li.parentNode.insertBefore(next, li); next = li.nextElementSibling; moved = true; }
+  if (moved) {
+    const order = [...document.querySelectorAll('#list li')].map(x => x.dataset.id);
+    items.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    refresh();
+  }
+  // 画面端に近づいたら自動スクロール
+  const edge = 70;
+  if (y < edge) window.scrollBy(0, -12);
+  else if (y > window.innerHeight - edge) window.scrollBy(0, 12);
+});
+
+function endDrag(e) {
+  if (!drag || e.pointerId !== drag.pid) return;
+  drag.li.classList.remove('dragging');
+  drag = null;
+  save();
+}
+$('list').addEventListener('pointerup', endDrag);
+$('list').addEventListener('pointercancel', endDrag);
+
+render();
+</script>
+</body>
+</html>
