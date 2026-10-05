@@ -130,8 +130,13 @@ function updateUI() {
 
 async function syncToFirestore() {
   if (currentRoomId) {
-    const docRef = doc(db, 'rooms', currentRoomId);
-    await setDoc(docRef, { items });
+    try {
+      const docRef = doc(db, 'rooms', currentRoomId);
+      await setDoc(docRef, { items });
+    } catch (error) {
+      console.error("Firestoreへの保存エラー:", error);
+      alert("保存に失敗しました。Firebaseのルール設定を確認してください。");
+    }
   } else {
     updateUI();
   }
@@ -140,19 +145,21 @@ async function syncToFirestore() {
 function addItem() {
   const nameInput = document.getElementById('itemName');
   const priceInput = document.getElementById('itemPrice');
-  const name = nameInput.value;
+  const name = nameInput.value.trim();
   const price = parseInt(priceInput.value);
 
   if (name && !isNaN(price)) {
     items.push({ name, price });
     nameInput.value = '';
     priceInput.value = '';
+    updateUI(); // 画面を先行更新
     syncToFirestore();
   }
 }
 
 function deleteItem(index) {
   items.splice(index, 1);
+  updateUI(); // 画面を先行更新
   syncToFirestore();
 }
 
@@ -175,6 +182,9 @@ function joinRoom(targetId) {
       setDoc(docRef, { items });
     }
     updateUI();
+  }, (error) => {
+    console.error("Firestore受信エラー:", error);
+    document.getElementById('roomStatus').innerText = `接続エラー：アクセス権限がありません`;
   });
 }
 
@@ -229,7 +239,6 @@ function handleTouchEnd() {
   syncToFirestore();
 }
 
-// ボタンから呼び出せるように登録
 window.addItem = addItem;
 window.deleteItem = deleteItem;
 window.joinRoom = joinRoom;
