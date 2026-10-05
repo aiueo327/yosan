@@ -110,6 +110,18 @@ h1 {
   margin-top: 6px; 
 }
 
+.history-select {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  outline: none;
+}
+
 .panel { 
   position: sticky; 
   top: env(safe-area-inset-top, 0px); 
@@ -192,7 +204,6 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
 .rank { width: 20px; font-weight: 700; color: var(--sub); flex: none; text-align: center; }
 .mid { flex: 1; min-width: 0; }
 
-/* 🔗 URL付きリンクスタイル */
 .nm { font-weight: 600; overflow-wrap: anywhere; }
 .nm.has-url { 
   color: #1e88e5; 
@@ -234,6 +245,10 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
       <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
       <button onclick="window.joinRoom()">接続</button>
     </div>
+    <!-- 📜 合言葉の履歴ドロップダウン -->
+    <select id="roomHistorySelect" class="history-select" onchange="window.selectRoomFromHistory(this.value)">
+      <option value="">📜 過去の合言葉から選ぶ</option>
+    </select>
     <div id="roomStatus" class="room-status">未接続（ローカル保存中）</div>
   </div>
 
@@ -283,17 +298,32 @@ let budget = 100000;
 let currentRoomId = null;
 let unsubscribe = null;
 let wasOver = false;
+let roomHistory = [];
 
 // 初期読み込み（Local Storage）
 try {
   items = JSON.parse(localStorage.getItem('plannedItems')) || [];
   const b = parseInt(localStorage.getItem('plannedBudget'), 10);
   if (!isNaN(b)) budget = b;
+  roomHistory = JSON.parse(localStorage.getItem('roomHistory')) || [];
 } catch (e) {}
 
 items = items.filter(i => i && typeof i.name === 'string' && Number.isFinite(i.price))
              .map((i, k) => ({ id: i.id || Date.now() + '-' + k, name: i.name, price: i.price, url: i.url || '' }));
 $('budget').value = budget;
+
+// 履歴選択肢の更新
+function updateHistoryUI() {
+  const select = $('roomHistorySelect');
+  select.innerHTML = '<option value="">📜 過去の合言葉から選ぶ</option>';
+  roomHistory.forEach(id => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = id;
+    select.appendChild(opt);
+  });
+}
+updateHistoryUI();
 
 async function save() {
   if (currentRoomId) {
@@ -402,15 +432,13 @@ $('budget').addEventListener('input', e => {
   save();
 });
 
-// アイテムのクリック処理（名前タップでジャンプ / URL編集 / 削除）
 $('list').addEventListener('click', e => {
-  const li = e.target.closest('li');
+  const li = e.target.closest('.li') || e.target.closest('li');
   if (!li) return;
   const id = li.dataset.id;
   const item = items.find(i => i.id === id);
   if (!item) return;
 
-  // 1. 名前を押したときのジャンプ処理
   if (e.target.classList.contains('nm')) {
     if (item.url && item.url.trim() !== '') {
       let url = item.url.trim();
@@ -422,7 +450,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 2. 「URL」ボタンを押したときの編集処理
   if (e.target.classList.contains('url-btn')) {
     const newUrl = prompt(`「${item.name}」のWebページURLを入力してください:`, item.url || '');
     if (newUrl !== null) {
@@ -433,7 +460,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 3. 削除ボタン処理
   if (e.target.classList.contains('del')) {
     items = items.filter(i => i.id !== id);
     render();
@@ -445,6 +471,13 @@ $('list').addEventListener('click', e => {
 function joinRoom(targetId) {
   const roomId = targetId || $('roomIdInput').value.trim();
   if (!roomId) return;
+
+  // 履歴に追加（重複は削除して先頭に追加）
+  roomHistory = [roomId, ...roomHistory.filter(id => id !== roomId)];
+  try {
+    localStorage.setItem('roomHistory', JSON.stringify(roomHistory));
+  } catch (e) {}
+  updateHistoryUI();
 
   if (unsubscribe) unsubscribe();
 
@@ -472,6 +505,12 @@ function joinRoom(targetId) {
     console.error("Firestore受信エラー:", error);
     $('roomStatus').innerText = `接続エラー：アクセス権限がありません`;
   });
+}
+
+function selectRoomFromHistory(val) {
+  if (val) {
+    joinRoom(val);
+  }
 }
 
 // つまみドラッグ並べ替え
@@ -513,6 +552,7 @@ function endDrag(e) {
 $('list').addEventListener('pointerup', endDrag);$('list').addEventListener('pointercancel', endDrag);
 
 window.joinRoom = joinRoom;
+window.selectRoomFromHistory = selectRoomFromHistory;
 
 render();
 </script>
