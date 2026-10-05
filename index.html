@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>買い物計画アプリ - リアルタイム＆オフライン対応版</title>
+<title>買い物計画アプリ - リアルタイム共有版</title>
 <style>
 body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
 h1 { text-align: center; color: #4a4a58; }
@@ -47,8 +47,8 @@ li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
 <div class="room-box">
   <div class="input-group" style="margin-bottom: 0;">
     <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
-    <button onclick="joinRoom()">接続</button>
-    <button onclick="generateRoom()" style="background-color: #4caf50;">新規発行</button>
+    <button onclick="window.joinRoom()">接続</button>
+    <button onclick="window.generateRoom()" style="background-color: #4caf50;">新規発行</button>
   </div>
   <div id="roomStatus" class="room-status">未接続（ローカル保存中）</div>
 </div>
@@ -56,7 +56,7 @@ li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
 <div class="input-group">
 <input type="text" id="itemName" placeholder="欲しいものを入力">
 <input type="number" id="itemPrice" placeholder="価格">
-<button onclick="addItem()">追加</button>
+<button onclick="window.addItem()">追加</button>
 </div>
 
 <ul id="itemList"></ul>
@@ -74,12 +74,9 @@ li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
 
 <!-- Firebase CDN読み込みと初期化 -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-// オフラインキャッシュ用モジュールをインポート
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
-// Firebaseプロジェクト設定
 const firebaseConfig = {
   apiKey: "AIzaSyDA9MSoP5GXpHqhzeHShGEwLfVgxjlCTxI",
   authDomain: "yosankeikaku.firebaseapp.com",
@@ -90,14 +87,8 @@ const firebaseConfig = {
   measurementId: "G-S5L0BJLSM5"
 };
 
-// Firebase初期化
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-// オフラインキャッシュ（永続化）を有効にしてFirestoreを初期化
-const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-});
+const db = getFirestore(app);
 
 let currentRoomId = null;
 let unsubscribe = null;
@@ -117,7 +108,7 @@ function updateUI() {
       <span>${index + 1}. ${item.name}</span>
       <div>
         <span class="item-price">¥${item.price.toLocaleString()}</span>
-        <button class="delete-btn" onclick="deleteItem(${index})">削除</button>
+        <button class="delete-btn" onclick="window.deleteItem(${index})">削除</button>
       </div>
     `;
 
@@ -238,7 +229,7 @@ function handleTouchEnd() {
   syncToFirestore();
 }
 
-// 外部から呼び出せるように登録
+// ボタンから呼び出せるように登録
 window.addItem = addItem;
 window.deleteItem = deleteItem;
 window.joinRoom = joinRoom;
