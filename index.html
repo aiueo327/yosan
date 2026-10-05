@@ -3,50 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>買い物計画 - リアルタイム共有版</title>
+<title>買い物計画</title>
+<!-- 🌟 ファンシー＆ポップな可愛いフォントを読み込み -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&family=Yusei+Magic&display=swap" rel="stylesheet">
+
 <style>
 :root {
-  --bg: #fdf0f4;
+  --bg: #fde8f0;
   --card: #ffffff;
-  --ink: #4a3e43;
-  --sub: #7a4b5d;
-  --line: #f1c6d3;
-  --ok: #e91e63;
-  --ng: #d32f2f;
-  --acc: #d87093;
-  --acc-hover: #c25278;
-  --room-bg: #fce4ec;
+  --ink: #4a3b40;
+  --sub: #8c6d75;
+  --line: #ffd1dc;
+  --ok: #ff5c8d;
+  --ng: #ff3b3b;
+  --acc: #4db8ff; /* ポップな水色ボタン */
+  --acc-shadow: #2b93df;
+  --btn-pink: #ff7597;
+  --btn-pink-shadow: #e0486e;
+  --room-bg: #fff0f5;
   --deco-left: "🍓";
   --deco-right: "🎀";
   box-sizing: border-box;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  transition: background-color 0.5s ease, color 0.5s ease;
+  transition: all 0.3s ease;
 }
 
-/* 🍔🍩 予算オーバー時のジャンクフード・ダークテーマ 🍩🍔 */
+/* 🍔🍩 予算オーバー時：ジャンク＆ダークポップテーマ */
 :root.over-theme {
-  --bg: #2b2b2e;
-  --card: #3a3a3e;
-  --ink: #d0c8b8;
-  --sub: #a09888;
-  --line: #55504a;
-  --acc: #8d6e63;
-  --acc-hover: #6d4c41;
-  --room-bg: #333130;
+  --bg: #2b2426;
+  --card: #3a3235;
+  --ink: #f8ecee;
+  --sub: #b39bA1;
+  --line: #524448;
+  --acc: #ff9f43;
+  --acc-shadow: #c87320;
+  --btn-pink: #d9534f;
+  --btn-pink-shadow: #a9322e;
+  --room-bg: #332a2d;
   --deco-left: "🍔";
   --deco-right: "🍩";
 }
 
-* { box-sizing: border-box; }
+* { 
+  box-sizing: border-box; 
+  -webkit-tap-highlight-color: transparent; 
+  user-select: none;
+}
 
 body { 
   margin: 0; 
+  min-height: 100vh;
   background: var(--bg); 
   color: var(--ink); 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Noto Sans JP", sans-serif; 
-  -webkit-tap-highlight-color: transparent; 
-  transition: background-color 0.5s ease, color 0.5s ease;
+  font-family: 'M PLUS Rounded 1c', 'Yusei Magic', sans-serif; 
+  letter-spacing: 0.02em;
+  overscroll-behavior-y: none;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 @keyframes shake {
@@ -58,10 +73,15 @@ body {
   100% { transform: translate(0, 0); }
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .wrap { 
-  max-width: 520px; 
+  max-width: 440px; 
   margin: 0 auto; 
-  padding: 16px 16px 40px; 
+  padding: 16px 16px 48px; 
   position: relative;
 }
 
@@ -70,148 +90,186 @@ body {
 }
 
 h1 { 
-  font-size: 20px; 
-  margin: 8px 0 14px; 
+  font-size: 22px; 
+  font-weight: 900;
+  margin: 8px 0 16px; 
   text-align: center; 
-  color: var(--sub); 
-  transition: color 0.5s ease;
+  color: #ff5c8d; 
+  text-shadow: 2px 2px 0px #ffffff, 4px 4px 0px rgba(255, 182, 193, 0.4);
+}
+:root.over-theme h1 {
+  color: #ff9f43;
+  text-shadow: 2px 2px 0px #000000;
 }
 
-/* 🍓🎀 🍔🍩 デコレーションアイコン 🍩🍔 🎀🍓 */
 .panel::before {
   content: var(--deco-left);
-  font-size: 26px;
+  font-size: 28px;
   position: absolute;
-  top: -14px;
-  left: 12px;
+  top: -16px;
+  left: 16px;
 }
 
 .panel::after {
   content: var(--deco-right);
-  font-size: 26px;
+  font-size: 28px;
   position: absolute;
-  top: -14px;
-  right: 12px;
+  top: -16px;
+  right: 16px;
 }
 
+/* ぷっくりかわいらしいカード＆枠線スタイル */
 .room-box {
   background: var(--room-bg);
-  padding: 12px;
-  border-radius: 12px;
-  margin-bottom: 14px;
-  border: 1px solid var(--line);
-  transition: background-color 0.5s ease, border-color 0.5s ease;
+  padding: 12px 14px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  border: 3px solid var(--line);
+  box-shadow: 0 4px 0px var(--line);
 }
 
 .room-status { 
-  font-size: 0.85em; 
+  font-size: 0.8em; 
   color: var(--sub); 
   text-align: center; 
-  font-weight: bold; 
+  font-weight: 800; 
   margin-top: 6px; 
 }
 
 .history-select {
   width: 100%;
   margin-top: 8px;
-  padding: 8px;
-  font-size: 0.9rem;
-  border-radius: 8px;
-  border: 1px solid var(--line);
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  border-radius: 14px;
+  border: 2px solid var(--line);
   background: var(--card);
   color: var(--ink);
   outline: none;
+  font-weight: 800;
+  font-family: inherit;
 }
 
+/* 予算表示パネル（ノート風ぷっくりデザイン） */
 .panel { 
   position: sticky; 
-  top: env(safe-area-inset-top, 0px); 
-  z-index: 5; 
+  top: 12px; 
+  z-index: 10; 
   background: var(--card); 
-  border: 1px solid var(--line); 
-  border-radius: 16px; 
-  padding: 16px; 
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  transition: background-color 0.5s ease, border-color 0.5s ease;
+  border-radius: 24px; 
+  padding: 18px 20px; 
+  border: 3.5px solid #ffb6c1;
+  box-shadow: 0 6px 0px #ffa0b0;
+}
+:root.over-theme .panel {
+  border-color: #ff9f43;
+  box-shadow: 0 6px 0px #d87d20;
 }
 
 .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.big { font-size: 24px; font-weight: 700; color: var(--sub); transition: color 0.5s ease; }
-.sub { font-size: 13px; color: var(--sub); transition: color 0.5s ease; }
-.bar { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; margin: 10px 0 8px; }
-.fill { height: 100%; width: 0; background: var(--ok); transition: width .25s, background .5s ease; }
-.fill.over { background: #b71c1c; }
+.big { font-size: 32px; font-weight: 900; color: #ff3b75; letter-spacing: -0.02em; }
+:root.over-theme .big { color: #ff9f43; }
 
-.verdict { font-size: 15px; font-weight: 600; color: var(--sub); transition: color 0.5s ease; }
+.sub { font-size: 13px; color: var(--sub); font-weight: 800; }
 
-label.budget { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); }
+/* ゲージバー */
+.bar { height: 14px; background: #ffe4e9; border-radius: 99px; overflow: hidden; margin: 12px 0 8px; border: 2px solid #ffccd5; }
+.fill { height: 100%; width: 0; background: linear-gradient(90deg, #ff85a2, #ff3b75); border-radius: 99px; transition: width 0.4s ease; }
+.fill.over { background: linear-gradient(90deg, #ff6b6b, #ff0000); }
 
+.verdict { font-size: 14px; font-weight: 900; color: var(--ink); }
+
+label.budget { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--sub); font-weight: 800; }
+
+/* ぷっくり入力フォーム */
 input { 
   font: inherit; 
-  font-size: 16px; 
+  font-size: 15px; 
   color: var(--ink); 
-  background: var(--card); 
-  border: 1px solid var(--line); 
-  border-radius: 8px; 
-  padding: 10px; 
+  background: #fff8fa; 
+  border: 2.5px solid var(--line);
+  border-radius: 16px; 
+  padding: 8px 12px; 
   min-width: 0; 
   outline: none;
-  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
+  font-weight: 800;
+}
+:root.over-theme input {
+  background: rgba(255, 255, 255, 0.08);
 }
 input:focus { border-color: var(--acc); }
 
-#budget { width: 110px; text-align: right; }
+#budget { width: 96px; text-align: right; font-weight: 900; background: transparent; border: none; padding: 2px 0; font-size: 16px; }
 
-.add { display: flex; gap: 8px; margin: 16px 0; }
-#name { flex: 1; }
-#price { width: 96px; }
+.add { display: flex; gap: 8px; margin: 18px 0 14px; }
+#name { flex: 1; user-select: text; }
+#price { width: 96px; user-select: text; }
 
+/* ぷにぷに押せる3D風ボタン */
 button { 
   font: inherit; 
-  font-size: 16px; 
+  font-size: 15px; 
   border: 0; 
-  border-radius: 8px; 
-  padding: 10px 14px; 
+  border-radius: 18px; 
+  padding: 10px 18px; 
   background: var(--acc); 
   color: #fff; 
   cursor: pointer; 
-  font-weight: bold;
-  transition: background-color 0.5s ease;
+  font-weight: 900;
+  box-shadow: 0 4px 0px var(--acc-shadow);
+  transition: all 0.1s ease;
 }
-button:hover { background: var(--acc-hover); }
+button:active { 
+  transform: translateY(3px); 
+  box-shadow: 0 1px 0px var(--acc-shadow); 
+}
 
 ul { list-style: none; margin: 0; padding: 0; }
 
+/* 📋 おこづかい帳風リストアイテム */
 li { 
   display: flex; 
   align-items: center; 
-  gap: 6px; 
+  gap: 8px; 
   background: var(--card); 
-  border: 1px solid var(--line); 
-  border-left: 5px solid var(--ok); 
-  border-radius: 10px; 
-  padding: 8px 8px 8px 4px; 
-  margin-bottom: 8px; 
-  user-select: none; 
-  -webkit-user-select: none; 
-  transition: background-color 0.5s ease, border-color 0.5s ease, opacity 0.3s ease;
+  border-radius: 18px; 
+  padding: 10px 12px 10px 6px; 
+  margin-bottom: 10px; 
+  border: 2.5px solid var(--line);
+  box-shadow: 0 4px 0px var(--line);
+  animation: slideUp 0.3s ease-out;
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-li.over { border-left-color: #b71c1c; }
+li.over { border-color: #ff8b8b; box-shadow: 0 4px 0px #ffb3b3; }
 li.over .nm, li.over .pr { opacity: .4; text-decoration: line-through; }
 
 li.pending {
-  border-left-color: #9e9e9e !important;
-  background: rgba(0, 0, 0, 0.03);
-  opacity: 0.6;
+  background: rgba(0, 0, 0, 0.02);
+  opacity: 0.5;
+  box-shadow: none;
 }
-li.pending .rank { color: #9e9e9e; }
+li.pending .rank { color: #aaa; }
 li.pending .nm { text-decoration: line-through; }
 
-li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc); position: relative; z-index: 3; transform: scale(1.02); }
+li.dragging { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); position: relative; z-index: 20; transform: scale(1.02); }
 
-.handle { touch-action: none; width: 28px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
-.rank { width: 18px; font-weight: 700; color: var(--sub); flex: none; text-align: center; font-size: 0.9rem; }
+.handle { 
+  touch-action: none; 
+  width: 28px; 
+  height: 36px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  color: #ff85a2; 
+  font-size: 16px; 
+  cursor: grab; 
+  flex: none; 
+  font-weight: 900;
+}
+.handle::before { content: "☰"; }
+
+.rank { width: 20px; font-weight: 900; color: #ff5c8d; flex: none; text-align: center; font-size: 0.95rem; }
 .mid { flex: 1; min-width: 0; padding-right: 4px; }
 
 .right-group {
@@ -221,95 +279,107 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
   flex-shrink: 0;
 }
 
-.nm { font-weight: 600; overflow-wrap: anywhere; }
+.nm { font-weight: 800; font-size: 0.95rem; overflow-wrap: anywhere; user-select: text; }
 .nm.has-url { 
   color: #1e88e5; 
   text-decoration: underline; 
   cursor: pointer; 
 }
-:root.over-theme .nm.has-url {
-  color: #64b5f6;
-}
 
-.cum { font-size: 11px; color: var(--sub); }
+.cum { font-size: 11px; color: var(--sub); font-weight: 800; margin-top: 2px; }
 
 .pr { 
-  font-weight: 700; 
+  font-weight: 900; 
   white-space: nowrap; 
-  color: var(--sub); 
-  font-size: 0.95rem; 
+  color: #ff3b75; 
+  font-size: 1rem; 
   text-align: right;
   min-width: 68px;
   cursor: pointer;
 }
+:root.over-theme .pr { color: #ff9f43; }
+
 .pr.unset {
-  color: #9e9e9e;
-  font-weight: normal;
-  font-size: 0.85rem;
-  text-decoration: underline dotted;
+  color: var(--sub);
+  font-weight: 800;
+  font-size: 0.8rem;
+  opacity: 0.6;
 }
 
 .action-btn { 
-  background: transparent; 
-  color: var(--sub); 
-  padding: 6px 8px; 
+  background: #f0f0f0; 
+  color: #666; 
+  padding: 6px 10px; 
   font-size: 11px; 
-  border: 1px solid var(--line); 
-  border-radius: 6px; 
-  line-height: 1; 
+  border: 0; 
+  border-radius: 12px; 
+  font-weight: 900;
   flex-shrink: 0;
-  min-width: 48px;
+  min-width: 44px;
   text-align: center;
+  box-shadow: 0 2px 0px #ccc;
 }
+.action-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0px 0px #ccc;
+}
+
 .action-btn.active {
-  background: var(--line);
-  font-weight: bold;
-}
-.action-btn.hold-btn.active {
-  background: #9e9e9e;
-  color: #fff;
-  border-color: #9e9e9e;
+  background: #ffd1dc;
+  color: #ff3b75;
+  box-shadow: 0 2px 0px #ff9eaa;
 }
 
-.del { background: transparent; color: #e53935; padding: 6px 6px; font-size: 18px; line-height: 1; flex-shrink: 0; }
-.empty { text-align: center; color: var(--sub); padding: 28px 0; }
+.del { 
+  background: #ffe5e5; 
+  color: #ff3b3b; 
+  padding: 6px 8px; 
+  border-radius: 12px;
+  font-size: 12px; 
+  font-weight: 900;
+  box-shadow: 0 2px 0px #ffb3b3;
+  line-height: 1;
+}
+.del:active { transform: translateY(2px); box-shadow: none; }
 
+.empty { text-align: center; color: var(--sub); padding: 36px 0; font-weight: 800; font-size: 0.95rem; }
+
+/* ポップアップモーダル */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.4);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 100;
-  padding: 20px;
 }
 .modal-overlay.hidden { display: none; }
 .modal-content {
   background: var(--card);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 28px 28px 0 0;
+  padding: 24px;
   width: 100%;
-  max-width: 400px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-  border: 1px solid var(--line);
+  max-width: 440px;
+  border-top: 4px solid var(--line);
+  box-shadow: 0 -10px 20px rgba(0,0,0,0.1);
+  animation: slideUp 0.3s ease-out;
 }
-.modal-title { font-size: 1.1rem; font-weight: bold; color: var(--sub); margin-bottom: 12px; }
-.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-.btn-cancel { background: #9e9e9e; }
+.modal-title { font-size: 1.1rem; font-weight: 900; color: var(--ink); margin-bottom: 14px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.btn-cancel { background: #eee; color: #666; box-shadow: 0 3px 0px #ccc; }
 </style>
 </head>
 <body>
 <div class="wrap" id="mainWrap">
   <h1 id="titleText">🍓 買い物計画 🎀</h1>
 
-  <!-- ルーム（合言葉）機能 -->
+  <!-- ルーム機能 -->
   <div class="room-box">
     <div class="add" style="margin: 0;">
-      <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
+      <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）">
       <button onclick="window.joinRoom()">接続</button>
     </div>
-    <!-- 📜 合言葉の履歴ドロップダウン -->
     <select id="roomHistorySelect" class="history-select" onchange="window.selectRoomFromHistory(this.value)">
       <option value="">📜 過去の合言葉から選ぶ</option>
     </select>
@@ -333,10 +403,10 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
   </div>
 
   <ul id="list"></ul>
-  <div class="sub" id="footerHint" style="text-align:center;margin-top:12px">左の「≡」をドラッグで並べ替え 🍓</div>
+  <div class="sub" id="footerHint" style="text-align:center;margin-top:20px;opacity:0.8;font-weight:800;">☰ をドラッグして順位を変更 🍓</div>
 </div>
 
-<!-- 🌟 URL設定ポップアップモーダル -->
+<!-- モーダル -->
 <div id="urlModal" class="modal-overlay hidden">
   <div class="modal-content">
     <div class="modal-title" id="modalItemTitle">URLを設定</div>
@@ -348,7 +418,6 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
   </div>
 </div>
 
-<!-- Firebase SDK (ES Module) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
@@ -377,7 +446,6 @@ let wasOver = false;
 let roomHistory = [];
 let editingItemId = null;
 
-// 初期読み込み（Local Storage）
 try {
   items = JSON.parse(localStorage.getItem('plannedItems')) || [];
   const b = parseInt(localStorage.getItem('plannedBudget'), 10);
@@ -437,18 +505,18 @@ function render() {
     if (it.pending) li.classList.add('pending');
     
     const hasUrl = it.url && it.url.trim() !== '';
-    const urlBtnText = hasUrl ? '🔗URL' : 'URL';
+    const urlBtnText = hasUrl ? '🔗' : 'URL';
     const nmClass = hasUrl ? 'nm has-url' : 'nm';
     const isPriceUnset = it.price === null || it.price === undefined;
 
-    li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え">≡</div>' +
+    li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え"></div>' +
       '<div class="rank"></div>' +
       `<div class="mid"><div class="${nmClass}" title="${hasUrl ? 'タップしてWebページを開く' : ''}">${it.name}</div><div class="cum"></div></div>` +
       '<div class="right-group">' +
-        `<div class="pr ${isPriceUnset ? 'unset' : ''}" title="タップして価格を変更">${yen(it.price)}</div>` +
+        `<div class="pr ${isPriceUnset ? 'unset' : ''}">${yen(it.price)}</div>` +
         `<button type="button" class="action-btn hold-btn ${it.pending ? 'active' : ''}">${it.pending ? '保留中' : '保留'}</button>` +
         `<button type="button" class="action-btn url-btn ${hasUrl ? 'active' : ''}">${urlBtnText}</button>` +
-        '<button type="button" class="del" aria-label="削除">×</button>' +
+        '<button type="button" class="del" aria-label="削除">✕</button>' +
       '</div>';
 
     ul.appendChild(li);
@@ -495,7 +563,7 @@ function refresh() {
 
   document.documentElement.classList.toggle('over-theme', isOver);
   $('titleText').textContent = isOver ? "🍔 買い物計画 🍩" : "🍓 買い物計画 🎀";
-  $('footerHint').textContent = isOver ? "左の「≡」をドラッグで並べ替え 🍩" : "左の「≡」をドラッグで並べ替え 🍓";
+  $('footerHint').textContent = isOver ? "☰ をドラッグして順位を変更 🍩" : "☰ をドラッグして順位を変更 🍓";
 
   if (currentRoomId) {
     $('roomStatus').innerText = isOver ? `接続中：${currentRoomId} 🍔` : `接続中：${currentRoomId} 🎀`;
@@ -506,11 +574,11 @@ function refresh() {
   $('fill').style.width = pct + '\%';$('fill').classList.toggle('over', isOver);
   
   const activeCount = items.filter(i => !i.pending).length;
-  $('verdict').textContent = !activeCount ? '' : fit === activeCount ? `全${fit}件、予算内です 🎀`
+  $('verdict').textContent = !activeCount ? '' : fit === activeCount ? `全${fit}件、予算内だよん 🎀`
     : fit === 0 ? '1位でも予算を超えています...😭' : `予算内で買えるのは ${fit}位 まで 🍔`;
   
   $('remain').textContent = !activeCount ? '' : totalActive <= budget
-    ? `残り ${yen(budget - totalActive)}` : `${yen(totalActive - budget)} 超過...🍩`;
+    ? `残り ${yen(budget - totalActive)}` : `${yen(totalActive - budget)} 超過...😭`;
 }
 
 function addItem() {
@@ -543,7 +611,6 @@ $('budget').addEventListener('input', e => {
   save();
 });
 
-// アイテムリストのイベント処理
 $('list').addEventListener('click', e => {
   const li = e.target.closest('li');
   if (!li) return;
@@ -551,7 +618,6 @@ $('list').addEventListener('click', e => {
   const item = items.find(i => i.id === id);
   if (!item) return;
 
-  // 1. 名前を押したときのジャンプ処理
   if (e.target.classList.contains('nm')) {
     if (item.url && item.url.trim() !== '') {
       let url = item.url.trim();
@@ -563,7 +629,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 2. 価格を押したときの価格編集
   if (e.target.classList.contains('pr')) {
     const currentPriceStr = item.price === null ? '' : item.price;
     const newPriceStr = prompt(`「${item.name}」の価格を入力してください:`, currentPriceStr);
@@ -576,7 +641,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 3. 「保留」ボタンを押したときの切り替え
   if (e.target.classList.contains('hold-btn')) {
     item.pending = !item.pending;
     render();
@@ -584,7 +648,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 4. 「URL」ボタンを押したときにポップアップを開く
   if (e.target.classList.contains('url-btn')) {
     editingItemId = id;
     $('modalItemTitle').textContent = `「${item.name}」のURL`;
@@ -593,7 +656,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 5. 削除ボタン処理
   if (e.target.classList.contains('del')) {
     items = items.filter(i => i.id !== id);
     render();
@@ -668,7 +730,6 @@ function selectRoomFromHistory(val) {
   }
 }
 
-// つまみドラッグ並べ替え
 let drag = null;
 $('list').addEventListener('pointerdown', e => {
   const h = e.target.closest('.handle');
