@@ -26,12 +26,12 @@
 
 /* 🥀 予算オーバー時の「悲しい・どんより枯れ葉」テーマ 🥀 */
 :root.over-theme {
-  --bg: #2b2b2e; /* どんより暗いダークグレー */
+  --bg: #2b2b2e;
   --card: #3a3a3e;
-  --ink: #d0c8b8; /* くすんだ古紙のような色 */
-  --sub: #a09888; /* セピアグレー */
+  --ink: #d0c8b8;
+  --sub: #a09888;
   --line: #55504a;
-  --acc: #5c554e; /* 枯れたブラウングレー */
+  --acc: #5c554e;
   --acc-hover: #48423c;
   --room-bg: #333130;
   --deco-left: "🥀";
@@ -49,7 +49,6 @@ body {
   transition: background-color 0.5s ease, color 0.5s ease;
 }
 
-/* 予算オーバー時のショックアニメーション（画面が揺れる） */
 @keyframes shake {
   0% { transform: translate(0, 0); }
   20% { transform: translate(-4px, 3px); }
@@ -78,7 +77,6 @@ h1 {
   transition: color 0.5s ease;
 }
 
-/* 🌸🍒🥀🍂 デコレーションアイコン 🍂🥀🍒🌸 */
 .panel::before {
   content: var(--deco-left);
   font-size: 26px;
@@ -129,7 +127,7 @@ h1 {
 .sub { font-size: 13px; color: var(--sub); transition: color 0.5s ease; }
 .bar { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; margin: 10px 0 8px; }
 .fill { height: 100%; width: 0; background: var(--ok); transition: width .25s, background .5s ease; }
-.fill.over { background: #b71c1c; } /* 赤黒い血のような残念レッド */
+.fill.over { background: #b71c1c; }
 
 .verdict { font-size: 15px; font-weight: 600; color: var(--sub); transition: color 0.5s ease; }
 
@@ -174,7 +172,7 @@ ul { list-style: none; margin: 0; padding: 0; }
 li { 
   display: flex; 
   align-items: center; 
-  gap: 10px; 
+  gap: 8px; 
   background: var(--card); 
   border: 1px solid var(--line); 
   border-left: 5px solid var(--ok); 
@@ -187,16 +185,42 @@ li {
 }
 
 li.over { border-left-color: #b71c1c; }
-li.over .nm, li.over .pr { opacity: .4; text-decoration: line-through; } /* 超過したアイテムは打ち消し線＋薄くなる */
+li.over .nm, li.over .pr { opacity: .4; text-decoration: line-through; }
 li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc); position: relative; z-index: 3; transform: scale(1.02); }
 
-.handle { touch-action: none; width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
-.rank { width: 24px; font-weight: 700; color: var(--sub); flex: none; text-align: center; }
+.handle { touch-action: none; width: 36px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
+.rank { width: 20px; font-weight: 700; color: var(--sub); flex: none; text-align: center; }
 .mid { flex: 1; min-width: 0; }
+
+/* 🔗 URL付きリンクスタイル */
 .nm { font-weight: 600; overflow-wrap: anywhere; }
+.nm.has-url { 
+  color: #1e88e5; 
+  text-decoration: underline; 
+  cursor: pointer; 
+}
+:root.over-theme .nm.has-url {
+  color: #64b5f6;
+}
+
 .cum { font-size: 12px; color: var(--sub); }
 .pr { font-weight: 700; white-space: nowrap; color: var(--sub); }
-.del { background: transparent; color: #e53935; padding: 8px 10px; font-size: 20px; line-height: 1; }
+
+.url-btn { 
+  background: transparent; 
+  color: var(--sub); 
+  padding: 6px 8px; 
+  font-size: 12px; 
+  border: 1px solid var(--line); 
+  border-radius: 6px; 
+  line-height: 1; 
+}
+.url-btn.active {
+  background: var(--line);
+  font-weight: bold;
+}
+
+.del { background: transparent; color: #e53935; padding: 8px 8px; font-size: 20px; line-height: 1; }
 .empty { text-align: center; color: var(--sub); padding: 28px 0; }
 </style>
 </head>
@@ -268,10 +292,9 @@ try {
 } catch (e) {}
 
 items = items.filter(i => i && typeof i.name === 'string' && Number.isFinite(i.price))
-             .map((i, k) => ({ id: i.id || Date.now() + '-' + k, name: i.name, price: i.price }));
+             .map((i, k) => ({ id: i.id || Date.now() + '-' + k, name: i.name, price: i.price, url: i.url || '' }));
 $('budget').value = budget;
 
-// FirestoreまたはLocalStorageへの保存
 async function save() {
   if (currentRoomId) {
     try {
@@ -288,7 +311,6 @@ async function save() {
   }
 }
 
-// 一覧を作り直す（追加・削除・データ受信時）
 function render() {
   const ul = $('list');
   ul.innerHTML = '';
@@ -299,19 +321,24 @@ function render() {
   items.forEach(it => {
     const li = document.createElement('li');
     li.dataset.id = it.id;
+    
+    const hasUrl = it.url && it.url.trim() !== '';
+    const urlBtnText = hasUrl ? '🔗URL' : 'URL';
+    const nmClass = hasUrl ? 'nm has-url' : 'nm';
+
     li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え">≡</div>' +
       '<div class="rank"></div>' +
-      '<div class="mid"><div class="nm"></div><div class="cum"></div></div>' +
+      `<div class="mid"><div class="${nmClass}" title="${hasUrl ? 'タップしてWebページを開く' : ''}">${it.name}</div><div class="cum"></div></div>` +
       '<div class="pr"></div>' +
+      `<button class="url-btn ${hasUrl ? 'active' : ''}">${urlBtnText}</button>` +
       '<button class="del" aria-label="削除">×</button>';
-    li.querySelector('.nm').textContent = it.name;
+
     li.querySelector('.pr').textContent = yen(it.price);
     ul.appendChild(li);
   });
   refresh();
 }
 
-// 順位・累計・ゲージ・判定のリアルタイム更新
 function refresh() {
   const byId = Object.fromEntries(items.map(i => [i.id, i]));
   let cum = 0, fit = 0;
@@ -329,7 +356,6 @@ function refresh() {
   const total = items.reduce((s, i) => s + i.price, 0);
   const isOver = total > budget;
 
-  // 予算オーバーになった瞬間だけ画面をショックで揺らす
   if (isOver && !wasOver) {
     const wrap = $('mainWrap');
     wrap.classList.add('shock');
@@ -337,7 +363,6 @@ function refresh() {
   }
   wasOver = isOver;
 
-  // テーマの切り替え（どんよりダーク・枯れ葉テーマへ）
   document.documentElement.classList.toggle('over-theme', isOver);
   $('titleText').textContent = isOver ? "🥀 買い物計画 💸" : "🌸 買い物計画 🍒";
   $('footerHint').textContent = isOver ? "左の「≡」をドラッグで並べ替え 🍂" : "左の「≡」をドラッグで並べ替え 🌸";
@@ -360,7 +385,7 @@ function addItem() {
   const name = $('name').value.trim();
   const price = parseInt($('price').value, 10);
   if (!name || isNaN(price) || price < 0) { (name ? $('price') :$('name')).focus(); return; }
-  items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, price });
+  items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, price, url: '' });
   $('name').value = '';$('price').value = '';
   render();
   save();
@@ -377,16 +402,46 @@ $('budget').addEventListener('input', e => {
   save();
 });
 
+// アイテムのクリック処理（名前タップでジャンプ / URL編集 / 削除）
 $('list').addEventListener('click', e => {
-  const btn = e.target.closest('.del');
-  if (!btn) return;
-  const id = btn.closest('li').dataset.id;
-  items = items.filter(i => i.id !== id);
-  render();
-  save();
+  const li = e.target.closest('li');
+  if (!li) return;
+  const id = li.dataset.id;
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+
+  // 1. 名前を押したときのジャンプ処理
+  if (e.target.classList.contains('nm')) {
+    if (item.url && item.url.trim() !== '') {
+      let url = item.url.trim();
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+    return;
+  }
+
+  // 2. 「URL」ボタンを押したときの編集処理
+  if (e.target.classList.contains('url-btn')) {
+    const newUrl = prompt(`「${item.name}」のWebページURLを入力してください:`, item.url || '');
+    if (newUrl !== null) {
+      item.url = newUrl.trim();
+      render();
+      save();
+    }
+    return;
+  }
+
+  // 3. 削除ボタン処理
+  if (e.target.classList.contains('del')) {
+    items = items.filter(i => i.id !== id);
+    render();
+    save();
+    return;
+  }
 });
 
-// 合言葉（ルーム）接続機能
 function joinRoom(targetId) {
   const roomId = targetId || $('roomIdInput').value.trim();
   if (!roomId) return;
@@ -403,7 +458,7 @@ function joinRoom(targetId) {
   unsubscribe = onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
       const data = snapshot.data();
-      items = data.items || [];
+      items = (data.items || []).map(i => ({ ...i, url: i.url || '' }));
       if (data.budget !== undefined) {
         budget = data.budget;
         $('budget').value = budget;
@@ -419,7 +474,7 @@ function joinRoom(targetId) {
   });
 }
 
-// つまみドラッグ並べ替え (Pointer Events)
+// つまみドラッグ並べ替え
 let drag = null;
 $('list').addEventListener('pointerdown', e => {
   const h = e.target.closest('.handle');
