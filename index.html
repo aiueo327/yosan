@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>買い物計画アプリ - リアルタイム共有版</title>
+<title>買い物計画アプリ - リアルタイム＆オフライン対応版</title>
 <style>
 body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
 h1 { text-align: center; color: #4a4a58; }
@@ -76,9 +76,10 @@ li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+// オフラインキャッシュ用モジュールをインポート
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// ご提供いただいた実際のFirebaseプロジェクト設定
+// Firebaseプロジェクト設定
 const firebaseConfig = {
   apiKey: "AIzaSyDA9MSoP5GXpHqhzeHShGEwLfVgxjlCTxI",
   authDomain: "yosankeikaku.firebaseapp.com",
@@ -89,10 +90,14 @@ const firebaseConfig = {
   measurementId: "G-S5L0BJLSM5"
 };
 
-// Firebaseおよび各サービスの初期化
+// Firebase初期化
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-const db = getFirestore(app);
+
+// オフラインキャッシュ（永続化）を有効にしてFirestoreを初期化
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+});
 
 let currentRoomId = null;
 let unsubscribe = null;
@@ -233,7 +238,7 @@ function handleTouchEnd() {
   syncToFirestore();
 }
 
-// 外部イベントから呼び出せるようにwindowオブジェクトに登録
+// 外部から呼び出せるように登録
 window.addItem = addItem;
 window.deleteItem = deleteItem;
 window.joinRoom = joinRoom;
