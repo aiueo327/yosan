@@ -5,50 +5,134 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>買い物計画アプリ - リアルタイム共有版</title>
 <style>
-body { font-family: sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
-h1 { text-align: center; color: #4a4a58; }
-.container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-.input-group { display: flex; gap: 10px; margin-bottom: 15px; }
-input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-input[type="number"] { width: 100px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-button { padding: 10px 15px; background-color: #5c6bc0; color: white; border: none; border-radius: 4px; cursor: pointer; }
-button:hover { background-color: #3f51b5; }
-ul { list-style: none; padding: 0; position: relative; }
+body { 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+  margin: 20px; 
+  background-color: #fdf0f4; /* 優しい淡いピンクの背景 */
+  color: #4a3e43; 
+}
+h1 { 
+  text-align: center; 
+  color: #7a4b5d; 
+  font-size: 1.5rem; 
+  margin-bottom: 20px; 
+}
+.container { 
+  max-width: 500px; 
+  margin: 0 auto; 
+  background: #ffffff; 
+  padding: 20px; 
+  border-radius: 16px; 
+  box-shadow: 0 4px 12px rgba(186, 110, 137, 0.15); 
+  position: relative; /* デコレーションの位置基準 */
+}
+
+/* 🌸🍒 角のデコレーションアイコン 🍒🌸 */
+.container::before {
+  content: "🌸";
+  font-size: 28px;
+  position: absolute;
+  top: -15px;
+  left: 10px;
+}
+
+.container::after {
+  content: "🍒";
+  font-size: 28px;
+  position: absolute;
+  top: -15px;
+  right: 10px;
+}
+
+.input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+input[type="text"] { 
+  flex-grow: 1; 
+  padding: 10px 12px; 
+  border: 1px solid #f1c6d3; 
+  border-radius: 8px; 
+  background-color: #fff9fa;
+  color: #4a3e43;
+  font-size: 0.95rem;
+  outline: none;
+}
+input[type="text"]:focus, input[type="number"]:focus {
+  border-color: #d87093;
+}
+input[type="number"] { 
+  width: 90px; 
+  padding: 10px 12px; 
+  border: 1px solid #f1c6d3; 
+  border-radius: 8px; 
+  background-color: #fff9fa;
+  color: #4a3e43;
+  font-size: 0.95rem;
+  outline: none;
+}
+button { 
+  padding: 10px 16px; 
+  background-color: #d87093; /* メインカラー（ローズピンク） */
+  color: white; 
+  border: none; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  font-weight: bold;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+button:hover { background-color: #c25278; }
+
+ul { list-style: none; padding: 0; position: relative; margin: 0; }
 li { 
-  background: #f9f9f9; 
-  border: 1px solid #eee; 
+  background: #fff5f7; 
+  border: 1px solid #fce4ec; 
   margin-bottom: 8px; 
   padding: 12px; 
-  border-radius: 4px; 
+  border-radius: 10px; 
   display: flex; 
   justify-content: space-between; 
   align-items: center; 
   touch-action: none; 
   user-select: none;
 }
-li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
-.gauge-container { margin-top: 30px; }
-.gauge-label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px; }
-.gauge-bar-bg { background-color: #e0e0e0; border-radius: 10px; height: 20px; overflow: hidden; }
-.gauge-bar-fill { height: 100%; width: 0%; background-color: #4caf50; transition: width 0.3s; }
-.item-price { font-weight: bold; color: #555; }
-.delete-btn { background-color: #ff5252; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
-.delete-btn:hover { background-color: #d32f2f; }
-.room-box { background: #e8eaf6; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
-.room-status { font-size: 0.85em; color: #5c6bc0; text-align: center; font-weight: bold; margin-top: 5px; }
+li.dragging { opacity: 0.7; background: #f8bbd0; border: 2px dashed #d87093; }
+
+.gauge-container { margin-top: 25px; }
+.gauge-label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; color: #7a4b5d; }
+.gauge-bar-bg { background-color: #f8e1e7; border-radius: 10px; height: 18px; overflow: hidden; }
+.gauge-bar-fill { height: 100%; width: 0%; background-color: #e91e63; transition: width 0.3s; }
+.item-price { font-weight: bold; color: #7a4b5d; }
+
+.delete-btn { 
+  background-color: #ef5350; 
+  color: white; 
+  border: none; 
+  padding: 6px 10px; 
+  border-radius: 6px; 
+  cursor: pointer; 
+  margin-left: 10px; 
+  font-size: 0.8rem;
+}
+.delete-btn:hover { background-color: #e53935; }
+
+.room-box { 
+  background: #fce4ec; 
+  padding: 12px; 
+  border-radius: 10px; 
+  margin-bottom: 20px; 
+}
+.room-status { font-size: 0.85em; color: #ad1457; text-align: center; font-weight: bold; margin-top: 6px; }
 </style>
 </head>
 <body>
 
 <div class="container">
-<h1>買い物計画</h1>
+<h1>🌸 買い物計画 🍒</h1>
 
 <!-- ルーム機能エリア -->
 <div class="room-box">
   <div class="input-group" style="margin-bottom: 0;">
     <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
     <button onclick="window.joinRoom()">接続</button>
-    <button onclick="window.generateRoom()" style="background-color: #4caf50;">新規発行</button>
   </div>
   <div id="roomStatus" class="room-status">未接続（ローカル保存中）</div>
 </div>
@@ -63,7 +147,7 @@ li.dragging { opacity: 0.7; background: #e0e0e0; border: 2px dashed #5c6bc0; }
 
 <div class="gauge-container">
 <div class="gauge-label">
-<span>合計金額</span>
+<span>合計金額 🌸</span>
 <span id="totalDisplay">¥0</span>
 </div>
 <div class="gauge-bar-bg">
@@ -105,7 +189,7 @@ function updateUI() {
     const li = document.createElement('li');
     li.dataset.index = index;
     li.innerHTML = `
-      <span>${index + 1}. ${item.name}</span>
+      <span>🌸 ${index + 1}. ${item.name}</span>
       <div>
         <span class="item-price">¥${item.price.toLocaleString()}</span>
         <button class="delete-btn" onclick="window.deleteItem(${index})">削除</button>
@@ -152,14 +236,14 @@ function addItem() {
     items.push({ name, price });
     nameInput.value = '';
     priceInput.value = '';
-    updateUI(); // 画面を先行更新
+    updateUI();
     syncToFirestore();
   }
 }
 
 function deleteItem(index) {
   items.splice(index, 1);
-  updateUI(); // 画面を先行更新
+  updateUI();
   syncToFirestore();
 }
 
@@ -171,7 +255,7 @@ function joinRoom(targetId) {
 
   currentRoomId = roomId;
   document.getElementById('roomIdInput').value = roomId;
-  document.getElementById('roomStatus').innerText = `接続中：${roomId}`;
+  document.getElementById('roomStatus').innerText = `接続中：${roomId} 🍒`;
 
   const docRef = doc(db, 'rooms', currentRoomId);
   unsubscribe = onSnapshot(docRef, (snapshot) => {
@@ -186,11 +270,6 @@ function joinRoom(targetId) {
     console.error("Firestore受信エラー:", error);
     document.getElementById('roomStatus').innerText = `接続エラー：アクセス権限がありません`;
   });
-}
-
-function generateRoom() {
-  const randomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-  joinRoom(randomId);
 }
 
 // タッチドラッグ制御
@@ -242,7 +321,6 @@ function handleTouchEnd() {
 window.addItem = addItem;
 window.deleteItem = deleteItem;
 window.joinRoom = joinRoom;
-window.generateRoom = generateRoom;
 
 updateUI();
 </script>
