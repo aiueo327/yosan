@@ -222,7 +222,6 @@ button:active {
 
 ul { list-style: none; margin: 0; padding: 0; }
 
-/* 📋 新レイアウトカードデザイン */
 li { 
   display: flex; 
   align-items: center; 
@@ -238,7 +237,7 @@ li {
 }
 
 li.over { border-color: #ff8b8b; box-shadow: 0 4px 0px #ffb3b3; }
-li.over .nm, li.over .cum { opacity: .45; text-decoration: line-through; }
+li.over .nm, li.over .pr { opacity: .45; text-decoration: line-through; }
 
 li.pending {
   background: rgba(0, 0, 0, 0.02);
@@ -306,27 +305,30 @@ li.dragging { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); position: relative; z
   flex-wrap: wrap;
 }
 
-/* 個別値段（少し控えめ） */
+/* 個別値段（大きく太くメイン強調） */
 .pr { 
-  font-weight: 800; 
+  font-weight: 900; 
   white-space: nowrap; 
-  color: var(--sub); 
-  font-size: 0.85rem; 
+  color: #ff3b75; 
+  font-size: 1.05rem; 
   cursor: pointer;
 }
+:root.over-theme .pr { color: #ff9f43; }
 
 .pr.unset {
+  color: var(--sub);
+  font-weight: 800;
+  font-size: 0.85rem;
   opacity: 0.7;
 }
 
-/* 累計金額（大きく強調表示） */
+/* 累計金額（控えめなサイズ） */
 .cum { 
-  font-size: 1rem; 
-  color: #ff3b75; 
-  font-weight: 900; 
+  font-size: 0.8rem; 
+  color: var(--sub); 
+  font-weight: 800; 
   white-space: nowrap; 
 }
-:root.over-theme .cum { color: #ff9f43; }
 
 .btn-group {
   display: flex;
