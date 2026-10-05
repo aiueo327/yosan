@@ -181,6 +181,7 @@ button:hover { background: var(--acc-hover); }
 
 ul { list-style: none; margin: 0; padding: 0; }
 
+/* 🌟 リストのレイアウトを調整（ボタン類を綺麗に右揃え） */
 li { 
   display: flex; 
   align-items: center; 
@@ -199,7 +200,6 @@ li {
 li.over { border-left-color: #b71c1c; }
 li.over .nm, li.over .pr { opacity: .4; text-decoration: line-through; }
 
-/* 💤 保留アイテムのスタイル */
 li.pending {
   border-left-color: #9e9e9e !important;
   background: rgba(0, 0, 0, 0.03);
@@ -210,9 +210,17 @@ li.pending .nm { text-decoration: line-through; }
 
 li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc); position: relative; z-index: 3; transform: scale(1.02); }
 
-.handle { touch-action: none; width: 32px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
+.handle { touch-action: none; width: 28px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
 .rank { width: 18px; font-weight: 700; color: var(--sub); flex: none; text-align: center; font-size: 0.9rem; }
-.mid { flex: 1; min-width: 0; }
+.mid { flex: 1; min-width: 0; padding-right: 4px; }
+
+/* 右側のボタン・金額グループ（右揃えで固定） */
+.right-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
 
 .nm { font-weight: 600; overflow-wrap: anywhere; }
 .nm.has-url { 
@@ -225,17 +233,29 @@ li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc
 }
 
 .cum { font-size: 11px; color: var(--sub); }
-.pr { font-weight: 700; white-space: nowrap; color: var(--sub); font-size: 0.95rem; }
 
+/* 金額の幅・位置を固定して揃える */
+.pr { 
+  font-weight: 700; 
+  white-space: nowrap; 
+  color: var(--sub); 
+  font-size: 0.95rem; 
+  text-align: right;
+  min-width: 68px; /* 金額表示の幅を固定して「保留」の位置を一直線に揃える */
+}
+
+/* ボタン幅・デザインの統一 */
 .action-btn { 
   background: transparent; 
   color: var(--sub); 
-  padding: 6px 6px; 
+  padding: 6px 8px; 
   font-size: 11px; 
   border: 1px solid var(--line); 
   border-radius: 6px; 
   line-height: 1; 
   flex-shrink: 0;
+  min-width: 48px; /* ボタン最小幅を確保 */
+  text-align: center;
 }
 .action-btn.active {
   background: var(--line);
@@ -420,10 +440,12 @@ function render() {
     li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え">≡</div>' +
       '<div class="rank"></div>' +
       `<div class="mid"><div class="${nmClass}" title="${hasUrl ? 'タップしてWebページを開く' : ''}">${it.name}</div><div class="cum"></div></div>` +
-      '<div class="pr"></div>' +
-      `<button type="button" class="action-btn hold-btn ${it.pending ? 'active' : ''}">${it.pending ? '保留中' : '保留'}</button>` +
-      `<button type="button" class="action-btn url-btn ${hasUrl ? 'active' : ''}">${urlBtnText}</button>` +
-      '<button type="button" class="del" aria-label="削除">×</button>';
+      '<div class="right-group">' +
+        `<div class="pr"></div>` +
+        `<button type="button" class="action-btn hold-btn ${it.pending ? 'active' : ''}">${it.pending ? '保留中' : '保留'}</button>` +
+        `<button type="button" class="action-btn url-btn ${hasUrl ? 'active' : ''}">${urlBtnText}</button>` +
+        '<button type="button" class="del" aria-label="削除">×</button>' +
+      '</div>';
 
     li.querySelector('.pr').textContent = yen(it.price);
     ul.appendChild(li);
@@ -441,7 +463,6 @@ function refresh() {
     if (!it) return;
 
     if (it.pending) {
-      // 保留中アイテムは計算・ランクから除外
       li.querySelector('.rank').textContent = '-';
       li.querySelector('.cum').textContent = '保留中 💤';
       li.classList.remove('over');
@@ -458,7 +479,8 @@ function refresh() {
     }
   });
   
-  const isOver = total > budget;
+  const totalActive = items.filter(i => !i.pending).reduce((s, i) => s + i.price, 0);
+  const isOver = totalActive > budget;
 
   if (isOver && !wasOver) {
     const wrap = $('mainWrap');
@@ -475,16 +497,16 @@ function refresh() {
     $('roomStatus').innerText = isOver ? `接続中：${currentRoomId} 🥀` : `接続中：${currentRoomId} 🍒`;
   }
 
-  $('total').textContent = yen(total);
-  const pct = budget > 0 ? Math.min(total / budget * 100, 100) : (total ? 100 : 0);
+  $('total').textContent = yen(totalActive);
+  const pct = budget > 0 ? Math.min(totalActive / budget * 100, 100) : (totalActive ? 100 : 0);
   $('fill').style.width = pct + '\%';$('fill').classList.toggle('over', isOver);
   
   const activeCount = items.filter(i => !i.pending).length;
   $('verdict').textContent = !activeCount ? '' : fit === activeCount ? `全${fit}件、予算内です 🌸`
     : fit === 0 ? '1位でも予算を超えています...😭' : `予算内で買えるのは ${fit}位 まで 🥀`;
   
-  $('remain').textContent = !activeCount ? '' : total <= budget
-    ? `残り ${yen(budget - total)}` : `${yen(total - budget)} 超過...💸`;
+  $('remain').textContent = !activeCount ? '' : totalActive <= budget
+    ? `残り ${yen(budget - totalActive)}` : `${yen(totalActive - budget)} 超過...💸`;
 }
 
 function addItem() {
@@ -516,7 +538,6 @@ $('list').addEventListener('click', e => {
   const item = items.find(i => i.id === id);
   if (!item) return;
 
-  // 1. 名前を押したときのジャンプ処理
   if (e.target.classList.contains('nm')) {
     if (item.url && item.url.trim() !== '') {
       let url = item.url.trim();
@@ -528,7 +549,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 2. 「保留」ボタンを押したときの切り替え
   if (e.target.classList.contains('hold-btn')) {
     item.pending = !item.pending;
     render();
@@ -536,7 +556,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 3. 「URL」ボタンを押したときにポップアップを開く
   if (e.target.classList.contains('url-btn')) {
     editingItemId = id;
     $('modalItemTitle').textContent = `「${item.name}」のURL`;
@@ -545,7 +564,6 @@ $('list').addEventListener('click', e => {
     return;
   }
 
-  // 4. 削除ボタン処理
   if (e.target.classList.contains('del')) {
     items = items.filter(i => i.id !== id);
     render();
