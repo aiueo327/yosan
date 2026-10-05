@@ -2,161 +2,238 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>買い物計画アプリ - リアルタイム共有版</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>買い物計画 - リアルタイム共有版</title>
 <style>
+:root {
+  --bg: #fdf0f4;
+  --card: #ffffff;
+  --ink: #4a3e43;
+  --sub: #7a4b5d;
+  --line: #f1c6d3;
+  --ok: #e91e63;
+  --ng: #8b0000;
+  --acc: #d87093;
+  --acc-hover: #c25278;
+  --room-bg: #fce4ec;
+  --deco-left: "🌸";
+  --deco-right: "🍒";
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  transition: background-color 0.5s ease, color 0.5s ease;
+}
+
+/* 🥀 予算オーバー時の「悲しい・どんより枯れ葉」テーマ 🥀 */
+:root.over-theme {
+  --bg: #2b2b2e; /* どんより暗いダークグレー */
+  --card: #3a3a3e;
+  --ink: #d0c8b8; /* くすんだ古紙のような色 */
+  --sub: #a09888; /* セピアグレー */
+  --line: #55504a;
+  --acc: #5c554e; /* 枯れたブラウングレー */
+  --acc-hover: #48423c;
+  --room-bg: #333130;
+  --deco-left: "🥀";
+  --deco-right: "🍂";
+}
+
+* { box-sizing: border-box; }
+
 body { 
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
-  margin: 20px; 
-  background-color: #fdf0f4; /* 優しい淡いピンクの背景 */
-  color: #4a3e43; 
+  margin: 0; 
+  background: var(--bg); 
+  color: var(--ink); 
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", "Noto Sans JP", sans-serif; 
+  -webkit-tap-highlight-color: transparent; 
+  transition: background-color 0.5s ease, color 0.5s ease;
 }
-h1 { 
-  text-align: center; 
-  color: #7a4b5d; 
-  font-size: 1.5rem; 
-  margin-bottom: 20px; 
+
+/* 予算オーバー時のショックアニメーション（画面が揺れる） */
+@keyframes shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-4px, 3px); }
+  40% { transform: translate(4px, -3px); }
+  60% { transform: translate(-3px, -2px); }
+  80% { transform: translate(3px, 2px); }
+  100% { transform: translate(0, 0); }
 }
-.container { 
-  max-width: 500px; 
+
+.wrap { 
+  max-width: 520px; 
   margin: 0 auto; 
-  background: #ffffff; 
-  padding: 20px; 
+  padding: 16px 16px 40px; 
+  position: relative;
+}
+
+.wrap.shock {
+  animation: shake 0.4s ease-in-out;
+}
+
+h1 { 
+  font-size: 20px; 
+  margin: 8px 0 14px; 
+  text-align: center; 
+  color: var(--sub); 
+  transition: color 0.5s ease;
+}
+
+/* 🌸🍒🥀🍂 デコレーションアイコン 🍂🥀🍒🌸 */
+.panel::before {
+  content: var(--deco-left);
+  font-size: 26px;
+  position: absolute;
+  top: -14px;
+  left: 12px;
+}
+
+.panel::after {
+  content: var(--deco-right);
+  font-size: 26px;
+  position: absolute;
+  top: -14px;
+  right: 12px;
+}
+
+.room-box {
+  background: var(--room-bg);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  transition: background-color 0.5s ease, border-color 0.5s ease;
+}
+
+.room-status { 
+  font-size: 0.85em; 
+  color: var(--sub); 
+  text-align: center; 
+  font-weight: bold; 
+  margin-top: 6px; 
+}
+
+.panel { 
+  position: sticky; 
+  top: env(safe-area-inset-top, 0px); 
+  z-index: 5; 
+  background: var(--card); 
+  border: 1px solid var(--line); 
   border-radius: 16px; 
-  box-shadow: 0 4px 12px rgba(186, 110, 137, 0.15); 
-  position: relative; /* デコレーションの位置基準 */
+  padding: 16px; 
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.5s ease, border-color 0.5s ease;
 }
 
-/* 🌸🍒 角のデコレーションアイコン 🍒🌸 */
-.container::before {
-  content: "🌸";
-  font-size: 28px;
-  position: absolute;
-  top: -15px;
-  left: 10px;
-}
+.row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.big { font-size: 24px; font-weight: 700; color: var(--sub); transition: color 0.5s ease; }
+.sub { font-size: 13px; color: var(--sub); transition: color 0.5s ease; }
+.bar { height: 14px; background: var(--line); border-radius: 7px; overflow: hidden; margin: 10px 0 8px; }
+.fill { height: 100%; width: 0; background: var(--ok); transition: width .25s, background .5s ease; }
+.fill.over { background: #b71c1c; } /* 赤黒い血のような残念レッド */
 
-.container::after {
-  content: "🍒";
-  font-size: 28px;
-  position: absolute;
-  top: -15px;
-  right: 10px;
-}
+.verdict { font-size: 15px; font-weight: 600; color: var(--sub); transition: color 0.5s ease; }
 
-.input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-input[type="text"] { 
-  flex-grow: 1; 
-  padding: 10px 12px; 
-  border: 1px solid #f1c6d3; 
+label.budget { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sub); }
+
+input { 
+  font: inherit; 
+  font-size: 16px; 
+  color: var(--ink); 
+  background: var(--card); 
+  border: 1px solid var(--line); 
   border-radius: 8px; 
-  background-color: #fff9fa;
-  color: #4a3e43;
-  font-size: 0.95rem;
+  padding: 10px; 
+  min-width: 0; 
   outline: none;
+  transition: background-color 0.5s ease, border-color 0.5s ease, color 0.5s ease;
 }
-input[type="text"]:focus, input[type="number"]:focus {
-  border-color: #d87093;
-}
-input[type="number"] { 
-  width: 90px; 
-  padding: 10px 12px; 
-  border: 1px solid #f1c6d3; 
-  border-radius: 8px; 
-  background-color: #fff9fa;
-  color: #4a3e43;
-  font-size: 0.95rem;
-  outline: none;
-}
+input:focus { border-color: var(--acc); }
+
+#budget { width: 110px; text-align: right; }
+
+.add { display: flex; gap: 8px; margin: 16px 0; }
+#name { flex: 1; }
+#price { width: 96px; }
+
 button { 
-  padding: 10px 16px; 
-  background-color: #d87093; /* メインカラー（ローズピンク） */
-  color: white; 
-  border: none; 
+  font: inherit; 
+  font-size: 16px; 
+  border: 0; 
   border-radius: 8px; 
+  padding: 10px 14px; 
+  background: var(--acc); 
+  color: #fff; 
   cursor: pointer; 
   font-weight: bold;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  transition: background-color 0.5s ease;
 }
-button:hover { background-color: #c25278; }
+button:hover { background: var(--acc-hover); }
 
-ul { list-style: none; padding: 0; position: relative; margin: 0; }
+ul { list-style: none; margin: 0; padding: 0; }
+
 li { 
-  background: #fff5f7; 
-  border: 1px solid #fce4ec; 
-  margin-bottom: 8px; 
-  padding: 12px; 
-  border-radius: 10px; 
   display: flex; 
-  justify-content: space-between; 
   align-items: center; 
-  touch-action: none; 
-  user-select: none;
-}
-li.dragging { opacity: 0.7; background: #f8bbd0; border: 2px dashed #d87093; }
-
-.gauge-container { margin-top: 25px; }
-.gauge-label { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; color: #7a4b5d; }
-.gauge-bar-bg { background-color: #f8e1e7; border-radius: 10px; height: 18px; overflow: hidden; }
-.gauge-bar-fill { height: 100%; width: 0%; background-color: #e91e63; transition: width 0.3s; }
-.item-price { font-weight: bold; color: #7a4b5d; }
-
-.delete-btn { 
-  background-color: #ef5350; 
-  color: white; 
-  border: none; 
-  padding: 6px 10px; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  margin-left: 10px; 
-  font-size: 0.8rem;
-}
-.delete-btn:hover { background-color: #e53935; }
-
-.room-box { 
-  background: #fce4ec; 
-  padding: 12px; 
+  gap: 10px; 
+  background: var(--card); 
+  border: 1px solid var(--line); 
+  border-left: 5px solid var(--ok); 
   border-radius: 10px; 
-  margin-bottom: 20px; 
+  padding: 8px 10px 8px 4px; 
+  margin-bottom: 8px; 
+  user-select: none; 
+  -webkit-user-select: none; 
+  transition: background-color 0.5s ease, border-color 0.5s ease;
 }
-.room-status { font-size: 0.85em; color: #ad1457; text-align: center; font-weight: bold; margin-top: 6px; }
+
+li.over { border-left-color: #b71c1c; }
+li.over .nm, li.over .pr { opacity: .4; text-decoration: line-through; } /* 超過したアイテムは打ち消し線＋薄くなる */
+li.dragging { box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); border-color: var(--acc); position: relative; z-index: 3; transform: scale(1.02); }
+
+.handle { touch-action: none; width: 40px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 20px; cursor: grab; flex: none; }
+.rank { width: 24px; font-weight: 700; color: var(--sub); flex: none; text-align: center; }
+.mid { flex: 1; min-width: 0; }
+.nm { font-weight: 600; overflow-wrap: anywhere; }
+.cum { font-size: 12px; color: var(--sub); }
+.pr { font-weight: 700; white-space: nowrap; color: var(--sub); }
+.del { background: transparent; color: #e53935; padding: 8px 10px; font-size: 20px; line-height: 1; }
+.empty { text-align: center; color: var(--sub); padding: 28px 0; }
 </style>
 </head>
 <body>
+<div class="wrap" id="mainWrap">
+  <h1 id="titleText">🌸 買い物計画 🍒</h1>
 
-<div class="container">
-<h1>🌸 買い物計画 🍒</h1>
-
-<!-- ルーム機能エリア -->
-<div class="room-box">
-  <div class="input-group" style="margin-bottom: 0;">
-    <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
-    <button onclick="window.joinRoom()">接続</button>
+  <!-- ルーム（合言葉）機能 -->
+  <div class="room-box">
+    <div class="add" style="margin: 0;">
+      <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）を入力">
+      <button onclick="window.joinRoom()">接続</button>
+    </div>
+    <div id="roomStatus" class="room-status">未接続（ローカル保存中）</div>
   </div>
-  <div id="roomStatus" class="room-status">未接続（ローカル保存中）</div>
+
+  <div class="panel">
+    <div class="row">
+      <span class="big" id="total">¥0</span>
+      <label class="budget">予算 ¥<input type="number" id="budget" inputmode="numeric" min="0"></label>
+    </div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="sub" id="remain"></div>
+  </div>
+
+  <div class="add">
+    <input type="text" id="name" placeholder="欲しいもの" maxlength="40">
+    <input type="number" id="price" inputmode="numeric" placeholder="価格" min="0">
+    <button id="addBtn">追加</button>
+  </div>
+
+  <ul id="list"></ul>
+  <div class="sub" id="footerHint" style="text-align:center;margin-top:12px">左の「≡」をドラッグで並べ替え 🌸</div>
 </div>
 
-<div class="input-group">
-<input type="text" id="itemName" placeholder="欲しいものを入力">
-<input type="number" id="itemPrice" placeholder="価格">
-<button onclick="window.addItem()">追加</button>
-</div>
-
-<ul id="itemList"></ul>
-
-<div class="gauge-container">
-<div class="gauge-label">
-<span>合計金額 🌸</span>
-<span id="totalDisplay">¥0</span>
-</div>
-<div class="gauge-bar-bg">
-<div id="gaugeBar" class="gauge-bar-fill"></div>
-</div>
-</div>
-</div>
-
-<!-- Firebase CDN読み込みと初期化 -->
+<!-- Firebase SDK (ES Module) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
@@ -174,156 +251,215 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+const $ = id => document.getElementById(id);
+const yen = n => '¥' + n.toLocaleString('ja-JP');
+
+let items = [];
+let budget = 100000;
 let currentRoomId = null;
 let unsubscribe = null;
-let items = JSON.parse(localStorage.getItem('plannedItems')) || [];
-const maxBudget = 100000;
+let wasOver = false;
 
-function updateUI() {
-  const itemList = document.getElementById('itemList');
-  itemList.innerHTML = '';
+// 初期読み込み（Local Storage）
+try {
+  items = JSON.parse(localStorage.getItem('plannedItems')) || [];
+  const b = parseInt(localStorage.getItem('plannedBudget'), 10);
+  if (!isNaN(b)) budget = b;
+} catch (e) {}
 
-  let total = 0;
-  items.forEach((item, index) => {
-    total += item.price;
-    const li = document.createElement('li');
-    li.dataset.index = index;
-    li.innerHTML = `
-      <span>🌸 ${index + 1}. ${item.name}</span>
-      <div>
-        <span class="item-price">¥${item.price.toLocaleString()}</span>
-        <button class="delete-btn" onclick="window.deleteItem(${index})">削除</button>
-      </div>
-    `;
+items = items.filter(i => i && typeof i.name === 'string' && Number.isFinite(i.price))
+             .map((i, k) => ({ id: i.id || Date.now() + '-' + k, name: i.name, price: i.price }));
+$('budget').value = budget;
 
-    li.addEventListener('touchstart', handleTouchStart, { passive: false });
-    li.addEventListener('touchmove', handleTouchMove, { passive: false });
-    li.addEventListener('touchend', handleTouchEnd);
-
-    itemList.appendChild(li);
-  });
-
-  document.getElementById('totalDisplay').innerText = `¥${total.toLocaleString()}`;
-  const gaugePercentage = Math.min((total / maxBudget) * 100, 100);
-  document.getElementById('gaugeBar').style.width = `${gaugePercentage}%`;
-
-  if (!currentRoomId) {
-    localStorage.setItem('plannedItems', JSON.stringify(items));
-  }
-}
-
-async function syncToFirestore() {
+// FirestoreまたはLocalStorageへの保存
+async function save() {
   if (currentRoomId) {
     try {
       const docRef = doc(db, 'rooms', currentRoomId);
-      await setDoc(docRef, { items });
-    } catch (error) {
-      console.error("Firestoreへの保存エラー:", error);
-      alert("保存に失敗しました。Firebaseのルール設定を確認してください。");
+      await setDoc(docRef, { items, budget });
+    } catch (e) {
+      console.error("Firestore保存エラー:", e);
     }
   } else {
-    updateUI();
+    try {
+      localStorage.setItem('plannedItems', JSON.stringify(items));
+      localStorage.setItem('plannedBudget', String(budget));
+    } catch (e) {}
   }
+}
+
+// 一覧を作り直す（追加・削除・データ受信時）
+function render() {
+  const ul = $('list');
+  ul.innerHTML = '';
+  if (!items.length) {
+    const isOver = items.reduce((s, i) => s + i.price, 0) > budget;
+    ul.innerHTML = `<div class="empty">欲しいものを追加してください ${isOver ? '🥀' : '🌸'}</div>`;
+  }
+  items.forEach(it => {
+    const li = document.createElement('li');
+    li.dataset.id = it.id;
+    li.innerHTML = '<div class="handle" aria-label="ドラッグで並べ替え">≡</div>' +
+      '<div class="rank"></div>' +
+      '<div class="mid"><div class="nm"></div><div class="cum"></div></div>' +
+      '<div class="pr"></div>' +
+      '<button class="del" aria-label="削除">×</button>';
+    li.querySelector('.nm').textContent = it.name;
+    li.querySelector('.pr').textContent = yen(it.price);
+    ul.appendChild(li);
+  });
+  refresh();
+}
+
+// 順位・累計・ゲージ・判定のリアルタイム更新
+function refresh() {
+  const byId = Object.fromEntries(items.map(i => [i.id, i]));
+  let cum = 0, fit = 0;
+  document.querySelectorAll('#list li').forEach((li, k) => {
+    const it = byId[li.dataset.id];
+    if (!it) return;
+    cum += it.price;
+    const ok = cum <= budget;
+    if (ok && fit === k) fit = k + 1;
+    li.classList.toggle('over', !ok);
+    li.querySelector('.rank').textContent = k + 1;
+    li.querySelector('.cum').textContent = '累計 ' + yen(cum);
+  });
+  
+  const total = items.reduce((s, i) => s + i.price, 0);
+  const isOver = total > budget;
+
+  // 予算オーバーになった瞬間だけ画面をショックで揺らす
+  if (isOver && !wasOver) {
+    const wrap = $('mainWrap');
+    wrap.classList.add('shock');
+    setTimeout(() => wrap.classList.remove('shock'), 400);
+  }
+  wasOver = isOver;
+
+  // テーマの切り替え（どんよりダーク・枯れ葉テーマへ）
+  document.documentElement.classList.toggle('over-theme', isOver);
+  $('titleText').textContent = isOver ? "🥀 買い物計画 💸" : "🌸 買い物計画 🍒";
+  $('footerHint').textContent = isOver ? "左の「≡」をドラッグで並べ替え 🍂" : "左の「≡」をドラッグで並べ替え 🌸";
+
+  if (currentRoomId) {
+    $('roomStatus').innerText = isOver ? `接続中：${currentRoomId} 🥀` : `接続中：${currentRoomId} 🍒`;
+  }
+
+  $('total').textContent = yen(total);
+  const pct = budget > 0 ? Math.min(total / budget * 100, 100) : (total ? 100 : 0);
+  $('fill').style.width = pct + '%';
+  $('fill').classList.toggle('over', isOver);$('verdict').textContent = !items.length ? '' : fit === items.length ? `全${fit}件、予算内です 🌸`
+    : fit === 0 ? '1位でも予算を超えています...😭' : `予算内で買えるのは ${fit}位 まで 🥀`;
+  
+  $('remain').textContent = !items.length ? '' : total <= budget
+    ? `残り ${yen(budget - total)}` : `${yen(total - budget)} 超過...💸`;
 }
 
 function addItem() {
-  const nameInput = document.getElementById('itemName');
-  const priceInput = document.getElementById('itemPrice');
-  const name = nameInput.value.trim();
-  const price = parseInt(priceInput.value);
-
-  if (name && !isNaN(price)) {
-    items.push({ name, price });
-    nameInput.value = '';
-    priceInput.value = '';
-    updateUI();
-    syncToFirestore();
-  }
+  const name = $('name').value.trim();
+  const price = parseInt($('price').value, 10);
+  if (!name || isNaN(price) || price < 0) { (name ? $('price') :$('name')).focus(); return; }
+  items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, price });
+  $('name').value = '';$('price').value = '';
+  render();
+  save();
+  $('name').focus();
 }
 
-function deleteItem(index) {
-  items.splice(index, 1);
-  updateUI();
-  syncToFirestore();
-}
+$('addBtn').addEventListener('click', addItem);
+['name', 'price'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); }));
 
+$('budget').addEventListener('input', e => {
+  const v = parseInt(e.target.value, 10);
+  budget = isNaN(v) ? 0 : Math.max(v, 0);
+  refresh();
+  save();
+});
+
+$('list').addEventListener('click', e => {
+  const btn = e.target.closest('.del');
+  if (!btn) return;
+  const id = btn.closest('li').dataset.id;
+  items = items.filter(i => i.id !== id);
+  render();
+  save();
+});
+
+// 合言葉（ルーム）接続機能
 function joinRoom(targetId) {
-  const roomId = targetId || document.getElementById('roomIdInput').value.trim();
+  const roomId = targetId || $('roomIdInput').value.trim();
   if (!roomId) return;
 
   if (unsubscribe) unsubscribe();
 
   currentRoomId = roomId;
-  document.getElementById('roomIdInput').value = roomId;
-  document.getElementById('roomStatus').innerText = `接続中：${roomId} 🍒`;
+  $('roomIdInput').value = roomId;
+  
+  const isOver = items.reduce((s, i) => s + i.price, 0) > budget;
+  $('roomStatus').innerText = isOver ? `接続中：${roomId} 🥀` : `接続中：${roomId} 🍒`;
 
   const docRef = doc(db, 'rooms', currentRoomId);
   unsubscribe = onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
-      items = snapshot.data().items || [];
+      const data = snapshot.data();
+      items = data.items || [];
+      if (data.budget !== undefined) {
+        budget = data.budget;
+        $('budget').value = budget;
+      }
     } else {
       items = [];
-      setDoc(docRef, { items });
+      setDoc(docRef, { items, budget });
     }
-    updateUI();
+    render();
   }, (error) => {
     console.error("Firestore受信エラー:", error);
-    document.getElementById('roomStatus').innerText = `接続エラー：アクセス権限がありません`;
+    $('roomStatus').innerText = `接続エラー：アクセス権限がありません`;
   });
 }
 
-// タッチドラッグ制御
-let draggedIndex = null;
-let activeElement = null;
-
-function handleTouchStart(e) {
-  if (e.target.tagName === 'BUTTON') return;
-  draggedIndex = parseInt(this.dataset.index);
-  activeElement = this;
-  this.classList.add('dragging');
-}
-
-function handleTouchMove(e) {
-  if (draggedIndex === null) return;
+// つまみドラッグ並べ替え (Pointer Events)
+let drag = null;
+$('list').addEventListener('pointerdown', e => {
+  const h = e.target.closest('.handle');
+  if (!h) return;
   e.preventDefault();
+  const li = h.closest('li');
+  h.setPointerCapture(e.pointerId);
+  li.classList.add('dragging');
+  drag = { li, h, pid: e.pointerId };
+  if (navigator.vibrate) navigator.vibrate(10);
+});
 
-  const touch = e.touches[0];
-  const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
-
-  if (!targetElement) return;
-
-  const targetLi = targetElement.closest('li');
-  if (targetLi && targetLi !== activeElement) {
-    const targetIndex = parseInt(targetLi.dataset.index);
-    if (!isNaN(targetIndex)) {
-      const movedItem = items.splice(draggedIndex, 1)[0];
-      items.splice(targetIndex, 0, movedItem);
-      draggedIndex = targetIndex;
-      
-      const newLis = document.querySelectorAll('#itemList li');
-      activeElement = newLis[targetIndex];
-      if (activeElement) activeElement.classList.add('dragging');
-      
-      updateUI();
-    }
+$('list').addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.pid) return;
+  const { li } = drag, y = e.clientY;
+  const mid = el => { const r = el.getBoundingClientRect(); return r.top + r.height / 2; };
+  let prev = li.previousElementSibling, next = li.nextElementSibling, moved = false;
+  while (prev && y < mid(prev)) { li.parentNode.insertBefore(li, prev); prev = li.previousElementSibling; moved = true; }
+  while (next && y > mid(next)) { li.parentNode.insertBefore(next, li); next = li.nextElementSibling; moved = true; }
+  if (moved) {
+    const order = [...document.querySelectorAll('#list li')].map(x => x.dataset.id);
+    items.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+    refresh();
   }
-}
+  const edge = 70;
+  if (y < edge) window.scrollBy(0, -12);
+  else if (y > window.innerHeight - edge) window.scrollBy(0, 12);
+});
 
-function handleTouchEnd() {
-  if (activeElement) {
-    activeElement.classList.remove('dragging');
-  }
-  draggedIndex = null;
-  activeElement = null;
-  syncToFirestore();
+function endDrag(e) {
+  if (!drag || e.pointerId !== drag.pid) return;
+  drag.li.classList.remove('dragging');
+  drag = null;
+  save();
 }
+$('list').addEventListener('pointerup', endDrag);$('list').addEventListener('pointercancel', endDrag);
 
-window.addItem = addItem;
-window.deleteItem = deleteItem;
 window.joinRoom = joinRoom;
 
-updateUI();
+render();
 </script>
-
 </body>
 </html>
