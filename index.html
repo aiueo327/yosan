@@ -337,11 +337,11 @@ li.pending { background: rgba(0, 0, 0, 0.02); opacity: 0.55; box-shadow: none; }
       </div>
 
       <div class="shift-form-row">
-        <!-- 彼女さんのシフト -->
+        <!-- 彼女さんのシフト（17時上がり表記） -->
         <div class="person-input">
           <span>彼女のシフト 🎀</span>
           <div class="shift-options">
-            <button type="button" class="shift-opt-btn" onclick="window.setShift('her', '17-18')" id="her-17-18">17-18時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('her', '17')" id="her-17">17時上がり</button>
             <button type="button" class="shift-opt-btn" onclick="window.setShift('her', '20')" id="her-20">20時上がり</button>
             <button type="button" class="shift-opt-btn" onclick="window.setShift('her', 'off')" id="her-off">休み</button>
           </div>
@@ -401,9 +401,8 @@ li.pending { background: rgba(0, 0, 0, 0.02); opacity: 0.55; box-shadow: none; }
   </div>
 </div>
 
-<!-- 🌟 アプリ核心処理（独立スクリプトで100%確実に動作） -->
+<!-- 🌟 アプリ核心処理 -->
 <script>
-// 基本データ構造
 var items = [];
 var budget = 100000;
 var currentRoomId = null;
@@ -443,7 +442,6 @@ window.changeTab = function(tabName) {
   }
 };
 
-// ローカル保存
 window.saveLocal = function() {
   try {
     localStorage.setItem('plannedItems', JSON.stringify(items));
@@ -453,7 +451,6 @@ window.saveLocal = function() {
   if (window.firebaseSave) window.firebaseSave();
 };
 
-// 買い物計画レンダリング
 window.render = function() {
   var ul = $('list');
   if (!ul) return;
@@ -535,7 +532,6 @@ window.refresh = function() {
   }
 };
 
-// 欲しいもの追加
 window.addItem = function() {
   var nameEl = $('name'), priceEl = $('price');
   if (!nameEl) return;
@@ -548,7 +544,6 @@ window.addItem = function() {
   window.saveLocal();
 };
 
-// 履歴UIの更新
 window.updateHistoryUI = function() {
   var select = $('roomHistorySelect');
   if (!select) return;
@@ -558,7 +553,6 @@ window.updateHistoryUI = function() {
   });
 };
 
-// 合言葉（接続）ボタン処理
 window.joinRoom = function(targetId) {
   var roomId = targetId || ($('roomIdInput') ? $('roomIdInput').value.trim() : '');
   if (!roomId) return;
@@ -573,7 +567,6 @@ window.joinRoom = function(targetId) {
 
 window.selectRoomFromHistory = function(val) { if (val) window.joinRoom(val); };
 
-// シフト選択
 window.setShift = function(person, val) {
   var shiftDateInput = $('shiftDate');
   var date = shiftDateInput ? shiftDateInput.value : '';
@@ -589,7 +582,16 @@ window.updateShiftUI = function() {
   var date = shiftDateInput ? shiftDateInput.value : '';
   var data = shiftData[date] || { her: 'off', a: 'off', b: 'off' };
 
-  ['her', 'a', 'b'].forEach(function(p) {
+  // ボタンのアクティブ化（彼女の17時上がりとあ・いさんの17-18時上がりを対応）
+  ['17', '17-18', '20', 'off'].forEach(function(v) {
+    var herBtn = $('her-' + v);
+    if (herBtn) {
+      if (data.her === v) herBtn.classList.add('active');
+      else herBtn.classList.remove('active');
+    }
+  });
+
+  ['a', 'b'].forEach(function(p) {
     ['17-18', '20', 'off'].forEach(function(v) {
       var btn = $(p + '-' + v);
       if (btn) {
@@ -606,14 +608,17 @@ window.updateShiftUI = function() {
     resEl.innerHTML = '<span class="badge-safe">🌸 休日</span> 彼女さんはお休みです！ゆっくり過ごしてね 🍓';
   } else {
     var sameShift = [];
-    if (data.a === data.her) sameShift.push('あさん');
-    if (data.b === data.her) sameShift.push('いさん');
+    // 彼女の17時上がりは あ・い さんの 17-18時上がり と一致判定
+    var herGroup = (data.her === '17' || data.her === '17-18') ? '17-18' : data.her;
+    
+    if (data.a === herGroup) sameShift.push('あさん');
+    if (data.b === herGroup) sameShift.push('いさん');
 
     var otherShift = [];
-    if (data.a !== 'off' && data.a !== data.her) otherShift.push('あさん');
-    if (data.b !== 'off' && data.b !== data.her) otherShift.push('いさん');
+    if (data.a !== 'off' && data.a !== herGroup) otherShift.push('あさん');
+    if (data.b !== 'off' && data.b !== herGroup) otherShift.push('いさん');
 
-    var labelStr = data.her === '17-18' ? '17-18時' : '20時';
+    var labelStr = data.her === '17' ? '17時' : (data.her === '17-18' ? '17-18時' : '20時');
 
     if (sameShift.length > 0) {
       resEl.innerHTML = '<span class="badge-risk">⚠️ 退勤時間一致</span><br>' + sameShift.join('・') + 'と上がりの時間が同じ(' + labelStr + ')です';
@@ -662,11 +667,11 @@ window.calculateStats = function() {
 
     var advice = '';
     if (st.totalDays === 0) advice = 'データなし';
-    else if (prob17 < prob20) advice = '👉 <b style="color:#ff3b75;">17-18時上がり</b> が安全 🍓';
+    else if (prob17 < prob20) advice = '👉 <b style="color:#ff3b75;">17時上がり</b> が安全 🍓';
     else if (prob20 < prob17) advice = '👉 <b style="color:#ff3b75;">20時上がり</b> が安全 🎀';
     else advice = '同等の重複率';
 
-    var probStr = st.totalDays > 0 ? '重複率 (17-18時: <b>' + prob17 + '%</b> / 20時: <b>' + prob20 + '%</b>)' : 'データがありません';
+    var probStr = st.totalDays > 0 ? '重複率 (17時: <b>' + prob17 + '%</b> / 20時: <b>' + prob20 + '%</b>)' : 'データがありません';
 
     html += '<div class="day-card">' +
               '<div class="day-header"><span><b>' + dayName + '</b></span><span>' + advice + '</span></div>' +
@@ -677,7 +682,6 @@ window.calculateStats = function() {
   listEl.innerHTML = !hasAnyData ? '<div style="text-align:center; padding:8px; color:var(--sub); font-weight:800;">データを入力すると曜日ごとの確率とおすすめが表示されます！</div>' : html;
 };
 
-// 画面読み込みイベント
 window.addEventListener('DOMContentLoaded', function() {
   if ($('budget')) $('budget').value = budget;
   window.updateHistoryUI();
