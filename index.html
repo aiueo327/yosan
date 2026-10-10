@@ -337,7 +337,7 @@ li.pending { background: rgba(0, 0, 0, 0.02); opacity: 0.55; box-shadow: none; }
       </div>
 
       <div class="shift-form-row">
-        <!-- 彼女さんのシフト（17時上がり表記） -->
+        <!-- 彼女さんのシフト -->
         <div class="person-input">
           <span>彼女のシフト 🎀</span>
           <div class="shift-options">
@@ -374,11 +374,11 @@ li.pending { background: rgba(0, 0, 0, 0.02); opacity: 0.55; box-shadow: none; }
       </div>
     </div>
 
-    <!-- 📊 曜日別傾向アドバイス（確率数値付き） -->
+    <!-- 📊 曜日別傾向アドバイス（パートさんの20時残存率＆締め会話回避提案） -->
     <div class="shift-card">
-      <div class="shift-title">📊 曜日別重複確率 & シフト提案</div>
+      <div class="shift-title">📊 曜日別・締め時間(20時)の分析</div>
       <div class="stats-item" style="color:var(--sub); font-size:0.75rem; margin-bottom:8px;">
-        あさん・いさんがその曜日に出勤している確率を数値化しています 🎀
+        パートさんが20時に残る確率（会話発生リスク）を分析してシフトを提案します 🎀
       </div>
       
       <div class="stats-box" id="dayStatsList">
@@ -422,7 +422,6 @@ var daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
 var $ = function(id) { return document.getElementById(id); };
 var yen = function(n) { return (n === null || n === undefined || isNaN(n)) ? '¥未定' : '¥' + n.toLocaleString('ja-JP'); };
 
-// タブ切り替え
 window.changeTab = function(tabName) {
   var shoppingTab = $('tabShoppingBtn');
   var shiftTab = $('tabShiftBtn');
@@ -582,8 +581,7 @@ window.updateShiftUI = function() {
   var date = shiftDateInput ? shiftDateInput.value : '';
   var data = shiftData[date] || { her: 'off', a: 'off', b: 'off' };
 
-  // ボタンのアクティブ化（彼女の17時上がりとあ・いさんの17-18時上がりを対応）
-  ['17', '17-18', '20', 'off'].forEach(function(v) {
+  ['17', '20', 'off'].forEach(function(v) {
     var herBtn = $('her-' + v);
     if (herBtn) {
       if (data.her === v) herBtn.classList.add('active');
@@ -607,34 +605,34 @@ window.updateShiftUI = function() {
   if (data.her === 'off') {
     resEl.innerHTML = '<span class="badge-safe">🌸 休日</span> 彼女さんはお休みです！ゆっくり過ごしてね 🍓';
   } else {
-    var sameShift = [];
-    // 彼女の17時上がりは あ・い さんの 17-18時上がり と一致判定
-    var herGroup = (data.her === '17' || data.her === '17-18') ? '17-18' : data.her;
-    
-    if (data.a === herGroup) sameShift.push('あさん');
-    if (data.b === herGroup) sameShift.push('いさん');
+    var p20AtWork = [];
+    if (data.a === '20') p20AtWork.push('あさん');
+    if (data.b === '20') p20AtWork.push('いさん');
 
-    var otherShift = [];
-    if (data.a !== 'off' && data.a !== herGroup) otherShift.push('あさん');
-    if (data.b !== 'off' && data.b !== herGroup) otherShift.push('いさん');
-
-    var labelStr = data.her === '17' ? '17時' : (data.her === '17-18' ? '17-18時' : '20時');
-
-    if (sameShift.length > 0) {
-      resEl.innerHTML = '<span class="badge-risk">⚠️ 退勤時間一致</span><br>' + sameShift.join('・') + 'と上がりの時間が同じ(' + labelStr + ')です';
-    } else if (otherShift.length > 0) {
-      resEl.innerHTML = '<span class="badge-warn">⚡️ 同日出勤</span><br>' + otherShift.join('・') + 'と同じ日に出勤しています';
-    } else {
-      resEl.innerHTML = '<span class="badge-safe">🌸 単独出勤</span> 他のメンバーとの上がり時間の重複はありません 🎀';
+    if (data.her === '20') {
+      if (p20AtWork.length > 0) {
+        resEl.innerHTML = '<span class="badge-risk">⚠️ 締め時に会話リスクあり</span><br>20時に' + p20AtWork.join('・') + 'も残っています';
+      } else {
+        resEl.innerHTML = '<span class="badge-safe">✨ 20時締め成功</span> パートさんは20時にいません！平和に締められます 🎀';
+      }
+    } else { // 17時上がり
+      if (p20AtWork.length > 0) {
+        resEl.innerHTML = '<span class="badge-safe">🌸 17時上がり正解</span> 20時に' + p20AtWork.join('・') + 'が残るため17時でサクッと帰ろう！🍓';
+      } else {
+        resEl.innerHTML = '<span class="badge-warn">💡 20時も狙えた日</span> 今日はパートさんが20時にいないので20時まで入れたかも！';
+      }
     }
   }
 
   window.calculateStats();
 };
 
+// 曜日別：パートさんが20時に残る確率（締めでの会話リスク）と狙い目提案
 window.calculateStats = function() {
   var statsByDay = {};
-  for (var i = 0; i < 7; i++) { statsByDay[i] = { '17-18': 0, '20': 0, totalDays: 0 }; }
+  for (var i = 0; i < 7; i++) {
+    statsByDay[i] = { p20Count: 0, p17Count: 0, pOffCount: 0, totalDays: 0 };
+  }
 
   Object.keys(shiftData).forEach(function(dateStr) {
     var d = shiftData[dateStr];
@@ -643,9 +641,17 @@ window.calculateStats = function() {
     var dayIdx = dateObj.getDay();
     if (isNaN(dayIdx)) return;
 
-    if (d.a !== 'off' || d.b !== 'off' || d.her !== 'off') statsByDay[dayIdx].totalDays++;
-    if (d.a === '17-18' || d.b === '17-18') statsByDay[dayIdx]['17-18']++;
-    if (d.a === '20' || d.b === '20') statsByDay[dayIdx]['20']++;
+    if (d.a !== 'off' || d.b !== 'off' || d.her !== 'off') {
+      statsByDay[dayIdx].totalDays++;
+    }
+
+    // パートさんの20時出勤カウント
+    var has20 = (d.a === '20' || d.b === '20');
+    var isAllOff = (d.a === 'off' && d.b === 'off');
+
+    if (has20) statsByDay[dayIdx].p20Count++;
+    else if (isAllOff) statsByDay[dayIdx].pOffCount++;
+    else statsByDay[dayIdx].p17Count++;
   });
 
   var listEl = $('dayStatsList');
@@ -659,19 +665,26 @@ window.calculateStats = function() {
     if (st.totalDays > 0) hasAnyData = true;
 
     var dayName = daysOfWeek[day] + '曜日';
-    var c17 = st['17-18'], c20 = st['20'];
     var total = st.totalDays || 1;
 
-    var prob17 = Math.round((c17 / total) * 100);
-    var prob20 = Math.round((c20 / total) * 100);
+    // パートさんが20時に残る確率
+    var prob20 = Math.round((st.p20Count / total) * 100);
+    // パートさんが全員休み（超安全）の確率
+    var probOff = Math.round((st.pOffCount / total) * 100);
 
     var advice = '';
-    if (st.totalDays === 0) advice = 'データなし';
-    else if (prob17 < prob20) advice = '👉 <b style="color:#ff3b75;">17時上がり</b> が安全 🍓';
-    else if (prob20 < prob17) advice = '👉 <b style="color:#ff3b75;">20時上がり</b> が安全 🎀';
-    else advice = '同等の重複率';
+    if (st.totalDays === 0) {
+      advice = 'データなし';
+    } else if (probOff >= 50) {
+      advice = '👉 <b style="color:#2ed573;">【絶好の狙い目】20時入りが超安全</b> 🌸';
+    } else if (prob20 >= 50) {
+      advice = '👉 <b style="color:#ff3b75;">【17時上がりが安全】20時は会話リスク高</b> 🍓';
+    } else {
+      advice = '👉 <b style="color:#ff9f43;">20時入り可能（パートさん早上がり多め）</b> 🎀';
+    }
 
-    var probStr = st.totalDays > 0 ? '重複率 (17時: <b>' + prob17 + '%</b> / 20時: <b>' + prob20 + '%</b>)' : 'データがありません';
+    var probStr = st.totalDays > 0 ? 
+      'パートさんが20時に残る確率: <b>' + prob20 + '%</b> （パートさん全員休みの確率: <b>' + probOff + '%</b>）' : 'データがありません';
 
     html += '<div class="day-card">' +
               '<div class="day-header"><span><b>' + dayName + '</b></span><span>' + advice + '</span></div>' +
