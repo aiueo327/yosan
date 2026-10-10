@@ -320,9 +320,9 @@ window.changeTab = function(tabName) {
     <div class="room-box">
       <div class="add" style="margin: 0;">
         <input type="text" id="roomIdInput" placeholder="合言葉（ルームID）">
-        <button type="button" onclick="joinRoom()">接続</button>
+        <button type="button" onclick="window.joinRoom()">接続</button>
       </div>
-      <select id="roomHistorySelect" class="history-select" onchange="selectRoomFromHistory(this.value)">
+      <select id="roomHistorySelect" class="history-select" onchange="window.selectRoomFromHistory(this.value)">
         <option value="">📜 過去の合言葉から選ぶ</option>
       </select>
       <div id="roomStatus" class="room-status" style="font-size:0.75rem; text-align:center; margin-top:4px; font-weight:800; color:var(--sub);">未接続（ローカル保存中）</div>
@@ -362,9 +362,9 @@ window.changeTab = function(tabName) {
         <div class="person-input">
           <span>彼女のシフト 🎀</span>
           <div class="shift-options">
-            <button type="button" class="shift-opt-btn" onclick="setShift('her', '17-18')" id="her-17-18">17-18時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('her', '20')" id="her-20">20時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('her', 'off')" id="her-off">休み</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('her', '17-18')" id="her-17-18">17-18時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('her', '20')" id="her-20">20時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('her', 'off')" id="her-off">休み</button>
           </div>
         </div>
 
@@ -372,9 +372,9 @@ window.changeTab = function(tabName) {
         <div class="person-input">
           <span>あさん 👤</span>
           <div class="shift-options">
-            <button type="button" class="shift-opt-btn" onclick="setShift('a', '17-18')" id="a-17-18">17-18時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('a', '20')" id="a-20">20時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('a', 'off')" id="a-off">休み</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('a', '17-18')" id="a-17-18">17-18時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('a', '20')" id="a-20">20時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('a', 'off')" id="a-off">休み</button>
           </div>
         </div>
 
@@ -382,9 +382,9 @@ window.changeTab = function(tabName) {
         <div class="person-input">
           <span>いさん 👤</span>
           <div class="shift-options">
-            <button type="button" class="shift-opt-btn" onclick="setShift('b', '17-18')" id="b-17-18">17-18時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('b', '20')" id="b-20">20時上がり</button>
-            <button type="button" class="shift-opt-btn" onclick="setShift('b', 'off')" id="b-off">休み</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('b', '17-18')" id="b-17-18">17-18時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('b', '20')" id="b-20">20時上がり</button>
+            <button type="button" class="shift-opt-btn" onclick="window.setShift('b', 'off')" id="b-off">休み</button>
           </div>
         </div>
       </div>
@@ -416,8 +416,8 @@ window.changeTab = function(tabName) {
     <div style="font-size: 1rem; font-weight: 900; margin-bottom: 10px;" id="modalItemTitle">URLを設定</div>
     <input type="url" id="modalUrlInput" placeholder="https://example.com/item" style="width: 100%;">
     <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px;">
-      <button type="button" onclick="closeUrlModal()" style="background:#eee; color:#666;">キャンセル</button>
-      <button type="button" onclick="saveUrlModal()">保存</button>
+      <button type="button" onclick="window.closeUrlModal()" style="background:#eee; color:#666;">キャンセル</button>
+      <button type="button" onclick="window.saveUrlModal()">保存</button>
     </div>
   </div>
 </div>
@@ -447,7 +447,7 @@ window.addEventListener('DOMContentLoaded', function() {
   updateShiftUI();
 });
 
-function setShift(person, val) {
+window.setShift = function(person, val) {
   var shiftDateInput = document.getElementById('shiftDate');
   var date = shiftDateInput ? shiftDateInput.value : '';
   if (!date) return;
@@ -455,7 +455,7 @@ function setShift(person, val) {
   shiftData[date][person] = val;
   updateShiftUI();
   if (window.triggerSave) window.triggerSave();
-}
+};
 
 function updateShiftUI() {
   var shiftDateInput = document.getElementById('shiftDate');
@@ -517,7 +517,6 @@ function calculateStats() {
     var dayIdx = dateObj.getDay();
     if (isNaN(dayIdx)) return;
 
-    // データが入力されている日数をカウント
     if (d.a !== 'off' || d.b !== 'off' || d.her !== 'off') {
       statsByDay[dayIdx].totalDays++;
     }
@@ -545,7 +544,6 @@ function calculateStats() {
     var c20 = st['20'];
     var total = st.totalDays || 1;
 
-    // 確率計算（パーセンテージ）
     var prob17 = Math.round((c17 / total) * 100);
     var prob20 = Math.round((c20 / total) * 100);
 
@@ -560,7 +558,7 @@ function calculateStats() {
       advice = '同等の重複率';
     }
 
-    var probStr = st.totalDays > 0 ? `重複率 (17-18時: <b>${prob17}%</b> / 20時: <b>${prob20}%</b>)` : 'データがありません';
+    var probStr = st.totalDays > 0 ? '重複率 (17-18時: <b>' + prob17 + '%</b> / 20時: <b>' + prob20 + '%</b>)' : 'データがありません';
 
     html += '<div class="day-card">' +
               '<div class="day-header">' +
@@ -764,6 +762,7 @@ window.joinRoom = function(targetId) {
   updateHistoryUI();
   if (unsubscribe) unsubscribe();
   currentRoomId = roomId; $('roomIdInput').value = roomId;
+  if ($('roomStatus'))$('roomStatus').textContent = '接続中: ' + roomId;
   const docRef = doc(db, 'rooms', currentRoomId);
   unsubscribe = onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
