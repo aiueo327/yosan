@@ -282,35 +282,14 @@ li.pending { background: rgba(0, 0, 0, 0.02); opacity: 0.55; box-shadow: none; }
 .modal-overlay.hidden { display: none; }
 .modal-content { background: var(--card); border-radius: 24px 24px 0 0; padding: 18px; width: 100%; max-width: 440px; border-top: 4px solid var(--line); }
 </style>
-
-<script>
-window.changeTab = function(tabName) {
-  var shoppingTab = document.getElementById('tabShoppingBtn');
-  var shiftTab = document.getElementById('tabShiftBtn');
-  var shoppingPage = document.getElementById('pageShopping');
-  var shiftPage = document.getElementById('pageShift');
-
-  if (tabName === 'shopping') {
-    shoppingTab.classList.add('active');
-    shiftTab.classList.remove('active');
-    shoppingPage.classList.add('active');
-    shiftPage.classList.remove('active');
-  } else {
-    shiftTab.classList.add('active');
-    shoppingTab.classList.remove('active');
-    shiftPage.classList.add('active');
-    shoppingPage.classList.remove('active');
-  }
-};
-</script>
 </head>
 <body>
 <div class="wrap" id="mainWrap">
 
   <!-- 🌟 上部アプリ切り替えタブ -->
   <div class="app-tabs">
-    <button type="button" class="tab-btn active" id="tabShoppingBtn" onclick="changeTab('shopping')">🍓 買い物計画</button>
-    <button type="button" class="tab-btn" id="tabShiftBtn" onclick="changeTab('shift')">🗓️ シフト・遭遇回避</button>
+    <button type="button" class="tab-btn active" id="tabShoppingBtn" onclick="window.changeTab('shopping')">🍓 買い物計画</button>
+    <button type="button" class="tab-btn" id="tabShiftBtn" onclick="window.changeTab('shift')">🗓️ シフト・遭遇回避</button>
   </div>
 
   <!-- PAGE 1: 買い物計画 -->
@@ -341,7 +320,7 @@ window.changeTab = function(tabName) {
     <div class="add">
       <input type="text" id="name" placeholder="欲しいもの" maxlength="40">
       <input type="number" id="price" inputmode="numeric" placeholder="価格(任意)" min="0">
-      <button type="button" id="addBtn">追加</button>
+      <button type="button" onclick="window.addItem()">追加</button>
     </div>
 
     <ul id="list"></ul>
@@ -422,60 +401,205 @@ window.changeTab = function(tabName) {
   </div>
 </div>
 
-<!-- 🌟 UIおよび標準機能のJavaScript -->
+<!-- 🌟 アプリ核心処理（独立スクリプトで100%確実に動作） -->
 <script>
+// 基本データ構造
+var items = [];
+var budget = 100000;
+var currentRoomId = null;
+var roomHistory = [];
+var editingItemId = null;
 var shiftData = {};
-try { shiftData = JSON.parse(localStorage.getItem('shiftData')) || {}; } catch(e) {}
+
+try {
+  items = JSON.parse(localStorage.getItem('plannedItems')) || [];
+  var b = parseInt(localStorage.getItem('plannedBudget'), 10);
+  if (!isNaN(b)) budget = b;
+  roomHistory = JSON.parse(localStorage.getItem('roomHistory')) || [];
+  shiftData = JSON.parse(localStorage.getItem('shiftData')) || {};
+} catch (e) {}
 
 var daysOfWeek = ['日', '月', '火', '水', '木', '金', '土'];
+var $ = function(id) { return document.getElementById(id); };
+var yen = function(n) { return (n === null || n === undefined || isNaN(n)) ? '¥未定' : '¥' + n.toLocaleString('ja-JP'); };
 
-// ページ読み込み完了時の初期設定
-window.addEventListener('DOMContentLoaded', function() {
-  var now = new Date();
-  var yyyy = now.getFullYear();
-  var mm = String(now.getMonth() + 1).padStart(2, '0');
-  var dd = String(now.getDate()).padStart(2, '0');
-  var todayStr = yyyy + '-' + mm + '-' + dd;
+// タブ切り替え
+window.changeTab = function(tabName) {
+  var shoppingTab = $('tabShoppingBtn');
+  var shiftTab = $('tabShiftBtn');
+  var shoppingPage = $('pageShopping');
+  var shiftPage = $('pageShift');
 
-  var shiftDateInput = document.getElementById('shiftDate');
-  if (shiftDateInput) {
-    shiftDateInput.value = todayStr;
-    shiftDateInput.addEventListener('change', function() {
-      updateShiftUI();
-    });
+  if (tabName === 'shopping') {
+    shoppingTab.classList.add('active');
+    shiftTab.classList.remove('active');
+    shoppingPage.classList.add('active');
+    shiftPage.classList.remove('active');
+  } else {
+    shiftTab.classList.add('active');
+    shoppingTab.classList.remove('active');
+    shiftPage.classList.add('active');
+    shoppingPage.classList.remove('active');
   }
-  updateShiftUI();
-});
+};
 
+// ローカル保存
+window.saveLocal = function() {
+  try {
+    localStorage.setItem('plannedItems', JSON.stringify(items));
+    localStorage.setItem('plannedBudget', String(budget));
+    localStorage.setItem('shiftData', JSON.stringify(shiftData));
+  } catch (e) {}
+  if (window.firebaseSave) window.firebaseSave();
+};
+
+// 買い物計画レンダリング
+window.render = function() {
+  var ul = $('list');
+  if (!ul) return;
+  ul.innerHTML = '';
+  if (!items.length) {
+    var activeItems = items.filter(function(i) { return !i.pending && i.price !== null; });
+    var isOver = activeItems.reduce(function(s, i) { return s + (i.price || 0); }, 0) > budget;
+    ul.innerHTML = '<div style="text-align:center; padding:24px; font-weight:800; color:var(--sub)">欲しいものを追加してください ' + (isOver ? '🍔' : '🍓') + '</div>';
+  }
+  items.forEach(function(it) {
+    var li = document.createElement('li');
+    li.dataset.id = it.id;
+    if (it.pending) li.classList.add('pending');
+    
+    var hasUrl = it.url && it.url.trim() !== '';
+    var urlBtnText = hasUrl ? '🔗' : 'URL';
+    var nmClass = hasUrl ? 'nm has-url' : 'nm';
+    var isPriceUnset = it.price === null || it.price === undefined;
+
+    li.innerHTML = '<div class="handle"></div><div class="rank"></div>' +
+      '<div class="item-content">' +
+        '<div class="' + nmClass + '">' + it.name + '</div>' +
+        '<div class="item-sub-row">' +
+          '<div class="price-info">' +
+            '<div class="pr ' + (isPriceUnset ? 'unset' : '') + '">' + yen(it.price) + '</div>' +
+            '<div class="cum"></div>' +
+          '</div>' +
+          '<div class="btn-group">' +
+            '<button type="button" class="action-btn hold-btn ' + (it.pending ? 'active' : '') + '">' + (it.pending ? '保留中' : '保留') + '</button>' +
+            '<button type="button" class="action-btn url-btn ' + (hasUrl ? 'active' : '') + '">' + urlBtnText + '</button>' +
+            '<button type="button" class="del">✕</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    ul.appendChild(li);
+  });
+  window.refresh();
+};
+
+window.refresh = function() {
+  var byId = {};
+  items.forEach(function(i) { byId[i.id] = i; });
+  var cum = 0, fit = 0, activeRank = 0, total = 0;
+
+  document.querySelectorAll('#list li').forEach(function(li) {
+    var it = byId[li.dataset.id];
+    if (!it) return;
+    if (it.pending) {
+      li.querySelector('.rank').textContent = '-';
+      li.querySelector('.cum').textContent = '(保留中)';
+    } else {
+      activeRank++;
+      var itemPrice = it.price || 0;
+      cum += itemPrice; total += itemPrice;
+      var ok = cum <= budget;
+      if (ok && fit === activeRank - 1) fit = activeRank;
+      li.querySelector('.rank').textContent = activeRank;
+      li.querySelector('.cum').textContent = it.price === null ? '' : '(累計 ' + yen(cum) + ')';
+    }
+  });
+  
+  var totalActive = items.filter(function(i) { return !i.pending; }).reduce(function(s, i) { return s + (i.price || 0); }, 0);
+  var isOver = totalActive > budget;
+  document.documentElement.classList.toggle('over-theme', isOver);
+  if ($('total')) $('total').textContent = yen(totalActive);
+  var pct = budget > 0 ? Math.min(totalActive / budget * 100, 100) : (totalActive ? 100 : 0);
+  if ($('fill')) {
+    $('fill').style.width = pct + '%';
+    $('fill').classList.toggle('over', isOver);
+  }
+  
+  var activeCount = items.filter(function(i) { return !i.pending; }).length;
+  if ($('verdict')) {
+    $('verdict').textContent = !activeCount ? '' : fit === activeCount ? '全' + fit + '件、予算内だよん 🎀'
+      : fit === 0 ? '1位でも予算を超えています...😭' : '予算内で買えるのは ' + fit + '位 まで 🍔';
+  }
+  if ($('remain')) {
+    $('remain').textContent = !activeCount ? '' : totalActive <= budget ? '残り ' + yen(budget - totalActive) : yen(totalActive - budget) + ' 超過...😭';
+  }
+};
+
+// 欲しいもの追加
+window.addItem = function() {
+  var nameEl = $('name'), priceEl = $('price');
+  if (!nameEl) return;
+  var name = nameEl.value.trim(), priceVal = priceEl.value.trim();
+  if (!name) return;
+  var price = priceVal === '' ? null : parseInt(priceVal, 10);
+  items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name: name, price: (isNaN(price) || price < 0) ? null : price, url: '', pending: false });
+  nameEl.value = ''; priceEl.value = '';
+  window.render();
+  window.saveLocal();
+};
+
+// 履歴UIの更新
+window.updateHistoryUI = function() {
+  var select = $('roomHistorySelect');
+  if (!select) return;
+  select.innerHTML = '<option value="">📜 過去の合言葉から選ぶ</option>';
+  roomHistory.forEach(function(id) {
+    var opt = document.createElement('option'); opt.value = id; opt.textContent = id; select.appendChild(opt);
+  });
+};
+
+// 合言葉（接続）ボタン処理
+window.joinRoom = function(targetId) {
+  var roomId = targetId || ($('roomIdInput') ? $('roomIdInput').value.trim() : '');
+  if (!roomId) return;
+  roomHistory = [roomId, ...roomHistory.filter(function(id) { return id !== roomId; })];
+  try { localStorage.setItem('roomHistory', JSON.stringify(roomHistory)); } catch (e) {}
+  window.updateHistoryUI();
+  currentRoomId = roomId;
+  if ($('roomIdInput')) $('roomIdInput').value = roomId;
+  if ($('roomStatus')) $('roomStatus').textContent = '接続中: ' + roomId;
+  if (window.firebaseConnect) window.firebaseConnect(currentRoomId);
+};
+
+window.selectRoomFromHistory = function(val) { if (val) window.joinRoom(val); };
+
+// シフト選択
 window.setShift = function(person, val) {
-  var shiftDateInput = document.getElementById('shiftDate');
+  var shiftDateInput = $('shiftDate');
   var date = shiftDateInput ? shiftDateInput.value : '';
   if (!date) return;
   if (!shiftData[date]) shiftData[date] = { her: 'off', a: 'off', b: 'off' };
   shiftData[date][person] = val;
-  updateShiftUI();
-  if (window.triggerSave) window.triggerSave();
+  window.updateShiftUI();
+  window.saveLocal();
 };
 
-function updateShiftUI() {
-  var shiftDateInput = document.getElementById('shiftDate');
+window.updateShiftUI = function() {
+  var shiftDateInput = $('shiftDate');
   var date = shiftDateInput ? shiftDateInput.value : '';
   var data = shiftData[date] || { her: 'off', a: 'off', b: 'off' };
 
   ['her', 'a', 'b'].forEach(function(p) {
     ['17-18', '20', 'off'].forEach(function(v) {
-      var btn = document.getElementById(p + '-' + v);
+      var btn = $(p + '-' + v);
       if (btn) {
-        if (data[p] === v) {
-          btn.classList.add('active');
-        } else {
-          btn.classList.remove('active');
-        }
+        if (data[p] === v) btn.classList.add('active');
+        else btn.classList.remove('active');
       }
     });
   });
 
-  var resEl = document.getElementById('shiftResult');
+  var resEl = $('shiftResult');
   if (!resEl) return;
 
   if (data.her === 'off') {
@@ -500,15 +624,12 @@ function updateShiftUI() {
     }
   }
 
-  calculateStats();
-}
+  window.calculateStats();
+};
 
-// 曜日別の分析・おすすめ判定・数値確率計算
-function calculateStats() {
+window.calculateStats = function() {
   var statsByDay = {};
-  for (var i = 0; i < 7; i++) {
-    statsByDay[i] = { '17-18': 0, '20': 0, totalDays: 0 };
-  }
+  for (var i = 0; i < 7; i++) { statsByDay[i] = { '17-18': 0, '20': 0, totalDays: 0 }; }
 
   Object.keys(shiftData).forEach(function(dateStr) {
     var d = shiftData[dateStr];
@@ -517,19 +638,12 @@ function calculateStats() {
     var dayIdx = dateObj.getDay();
     if (isNaN(dayIdx)) return;
 
-    if (d.a !== 'off' || d.b !== 'off' || d.her !== 'off') {
-      statsByDay[dayIdx].totalDays++;
-    }
-
-    if (d.a === '17-18' || d.b === '17-18') {
-      statsByDay[dayIdx]['17-18']++;
-    }
-    if (d.a === '20' || d.b === '20') {
-      statsByDay[dayIdx]['20']++;
-    }
+    if (d.a !== 'off' || d.b !== 'off' || d.her !== 'off') statsByDay[dayIdx].totalDays++;
+    if (d.a === '17-18' || d.b === '17-18') statsByDay[dayIdx]['17-18']++;
+    if (d.a === '20' || d.b === '20') statsByDay[dayIdx]['20']++;
   });
 
-  var listEl = document.getElementById('dayStatsList');
+  var listEl = $('dayStatsList');
   if (!listEl) return;
 
   var html = '';
@@ -540,44 +654,78 @@ function calculateStats() {
     if (st.totalDays > 0) hasAnyData = true;
 
     var dayName = daysOfWeek[day] + '曜日';
-    var c17 = st['17-18'];
-    var c20 = st['20'];
+    var c17 = st['17-18'], c20 = st['20'];
     var total = st.totalDays || 1;
 
     var prob17 = Math.round((c17 / total) * 100);
     var prob20 = Math.round((c20 / total) * 100);
 
     var advice = '';
-    if (st.totalDays === 0) {
-      advice = 'データなし';
-    } else if (prob17 < prob20) {
-      advice = '👉 <b style="color:#ff3b75;">17-18時上がり</b> が安全 🍓';
-    } else if (prob20 < prob17) {
-      advice = '👉 <b style="color:#ff3b75;">20時上がり</b> が安全 🎀';
-    } else {
-      advice = '同等の重複率';
-    }
+    if (st.totalDays === 0) advice = 'データなし';
+    else if (prob17 < prob20) advice = '👉 <b style="color:#ff3b75;">17-18時上がり</b> が安全 🍓';
+    else if (prob20 < prob17) advice = '👉 <b style="color:#ff3b75;">20時上がり</b> が安全 🎀';
+    else advice = '同等の重複率';
 
     var probStr = st.totalDays > 0 ? '重複率 (17-18時: <b>' + prob17 + '%</b> / 20時: <b>' + prob20 + '%</b>)' : 'データがありません';
 
     html += '<div class="day-card">' +
-              '<div class="day-header">' +
-                '<span><b>' + dayName + '</b></span>' +
-                '<span>' + advice + '</span>' +
-              '</div>' +
+              '<div class="day-header"><span><b>' + dayName + '</b></span><span>' + advice + '</span></div>' +
               '<div class="day-prob">' + probStr + '</div>' +
             '</div>';
   }
 
-  if (!hasAnyData) {
-    listEl.innerHTML = '<div style="text-align:center; padding:8px; color:var(--sub); font-weight:800;">データを入力すると曜日ごとの確率とおすすめが表示されます！</div>';
-  } else {
-    listEl.innerHTML = html;
+  listEl.innerHTML = !hasAnyData ? '<div style="text-align:center; padding:8px; color:var(--sub); font-weight:800;">データを入力すると曜日ごとの確率とおすすめが表示されます！</div>' : html;
+};
+
+// 画面読み込みイベント
+window.addEventListener('DOMContentLoaded', function() {
+  if ($('budget')) $('budget').value = budget;
+  window.updateHistoryUI();
+  
+  var now = new Date();
+  var todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+  var shiftDateInput = $('shiftDate');
+  if (shiftDateInput) {
+    shiftDateInput.value = todayStr;
+    shiftDateInput.addEventListener('change', window.updateShiftUI);
   }
-}
+  
+  if ($('budget')) {
+    $('budget').addEventListener('input', function(e) {
+      budget = Math.max(parseInt(e.target.value, 10) || 0, 0);
+      window.refresh();
+      window.saveLocal();
+    });
+  }
+
+  if ($('list')) {
+    $('list').addEventListener('click', function(e) {
+      var li = e.target.closest('li'); if (!li) return;
+      var item = items.find(function(i) { return i.id === li.dataset.id; }); if (!item) return;
+      if (e.target.classList.contains('nm') && item.url) window.open(/^https?:\/\//i.test(item.url) ? item.url : 'https://' + item.url, '_blank');
+      if (e.target.classList.contains('pr')) {
+        var p = prompt('「' + item.name + '」の価格を入力:', item.price === null ? '' : item.price);
+        if (p !== null) { item.price = isNaN(parseInt(p,10)) ? null : parseInt(p,10); window.render(); window.saveLocal(); }
+      }
+      if (e.target.classList.contains('hold-btn')) { item.pending = !item.pending; window.render(); window.saveLocal(); }
+      if (e.target.classList.contains('url-btn')) { editingItemId = item.id; $('modalUrlInput').value = item.url || ''; $('urlModal').classList.remove('hidden'); }
+      if (e.target.classList.contains('del')) { items = items.filter(function(i) { return i.id !== item.id; }); window.render(); window.saveLocal(); }
+    });
+  }
+
+  window.closeUrlModal = function() { $('urlModal').classList.add('hidden'); };
+  window.saveUrlModal = function() {
+    var item = items.find(function(i) { return i.id === editingItemId; });
+    if (item) { item.url = $('modalUrlInput').value.trim(); window.render(); window.saveLocal(); }
+    window.closeUrlModal();
+  };
+
+  window.render();
+  window.updateShiftUI();
+});
 </script>
 
-<!-- 🌟 Firebaseとオンライン同期機能のJavaScript -->
+<!-- 🌟 Firebaseオンラインリアルタイム同期 script -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
@@ -595,188 +743,35 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const $ = id => document.getElementById(id);
-const yen = n => (n === null || n === undefined || isNaN(n)) ? '¥未定' : '¥' + n.toLocaleString('ja-JP');
-
-let items = [];
-let budget = 100000;
-let currentRoomId = null;
 let unsubscribe = null;
-let roomHistory = [];
-let editingItemId = null;
 
-try {
-  items = JSON.parse(localStorage.getItem('plannedItems')) || [];
-  const b = parseInt(localStorage.getItem('plannedBudget'), 10);
-  if (!isNaN(b)) budget = b;
-  roomHistory = JSON.parse(localStorage.getItem('roomHistory')) || [];
-} catch (e) {}
-
-items = items.filter(i => i && typeof i.name === 'string')
-             .map((i, k) => ({ 
-               id: i.id || Date.now() + '-' + k, 
-               name: i.name, 
-               price: (i.price === null || i.price === undefined || isNaN(i.price)) ? null : i.price, 
-               url: i.url || '',
-               pending: !!i.pending 
-             }));
-if ($('budget'))$('budget').value = budget;
-
-function updateHistoryUI() {
-  const select = $('roomHistorySelect');
-  if (!select) return;
-  select.innerHTML = '<option value="">📜 過去の合言葉から選ぶ</option>';
-  roomHistory.forEach(id => {
-    const opt = document.createElement('option'); opt.value = id; opt.textContent = id; select.appendChild(opt);
-  });
-}
-updateHistoryUI();
-
-async function save() {
+window.firebaseSave = async function() {
   if (currentRoomId) {
     try { await setDoc(doc(db, 'rooms', currentRoomId), { items, budget, shiftData }); } catch (e) {}
-  } else {
-    try {
-      localStorage.setItem('plannedItems', JSON.stringify(items));
-      localStorage.setItem('plannedBudget', String(budget));
-      localStorage.setItem('shiftData', JSON.stringify(shiftData));
-    } catch (e) {}
   }
-}
-window.triggerSave = save;
-
-function render() {
-  const ul = $('list');
-  if (!ul) return;
-  ul.innerHTML = '';
-  if (!items.length) {
-    const activeItems = items.filter(i => !i.pending && i.price !== null);
-    const isOver = activeItems.reduce((s, i) => s + (i.price || 0), 0) > budget;
-    ul.innerHTML = `<div style="text-align:center; padding:24px; font-weight:800; color:var(--sub)">欲しいものを追加してください ${isOver ? '🍔' : '🍓'}</div>`;
-  }
-  items.forEach(it => {
-    const li = document.createElement('li');
-    li.dataset.id = it.id;
-    if (it.pending) li.classList.add('pending');
-    
-    const hasUrl = it.url && it.url.trim() !== '';
-    const urlBtnText = hasUrl ? '🔗' : 'URL';
-    const nmClass = hasUrl ? 'nm has-url' : 'nm';
-    const isPriceUnset = it.price === null || it.price === undefined;
-
-    li.innerHTML = '<div class="handle"></div><div class="rank"></div>' +
-      '<div class="item-content">' +
-        `<div class="${nmClass}">${it.name}</div>` +
-        '<div class="item-sub-row">' +
-          '<div class="price-info">' +
-            `<div class="pr ${isPriceUnset ? 'unset' : ''}">${yen(it.price)}</div>` +
-            '<div class="cum"></div>' +
-          '</div>' +
-          '<div class="btn-group">' +
-            `<button type="button" class="action-btn hold-btn ${it.pending ? 'active' : ''}">${it.pending ? '保留中' : '保留'}</button>` +
-            `<button type="button" class="action-btn url-btn ${hasUrl ? 'active' : ''}">${urlBtnText}</button>` +
-            '<button type="button" class="del">✕</button>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    ul.appendChild(li);
-  });
-  refresh();
-}
-
-function refresh() {
-  const byId = Object.fromEntries(items.map(i => [i.id, i]));
-  let cum = 0, fit = 0, activeRank = 0, total = 0;
-
-  document.querySelectorAll('#list li').forEach((li) => {
-    const it = byId[li.dataset.id];
-    if (!it) return;
-    if (it.pending) {
-      li.querySelector('.rank').textContent = '-';
-      li.querySelector('.cum').textContent = '(保留中)';
-    } else {
-      activeRank++;
-      const itemPrice = it.price || 0;
-      cum += itemPrice; total += itemPrice;
-      const ok = cum <= budget;
-      if (ok && fit === activeRank - 1) fit = activeRank;
-      li.querySelector('.rank').textContent = activeRank;
-      li.querySelector('.cum').textContent = it.price === null ? '' : '(累計 ' + yen(cum) + ')';
-    }
-  });
-  
-  const totalActive = items.filter(i => !i.pending).reduce((s, i) => s + (i.price || 0), 0);
-  const isOver = totalActive > budget;
-  document.documentElement.classList.toggle('over-theme', isOver);
-  if ($('total'))$('total').textContent = yen(totalActive);
-  const pct = budget > 0 ? Math.min(totalActive / budget * 100, 100) : (totalActive ? 100 : 0);
-  if ($('fill')) {
-    $('fill').style.width = pct + '\%';$('fill').classList.toggle('over', isOver);
-  }
-  
-  const activeCount = items.filter(i => !i.pending).length;
-  if ($('verdict')) {$('verdict').textContent = !activeCount ? '' : fit === activeCount ? `全${fit}件、予算内だよん 🎀`
-      : fit === 0 ? '1位でも予算を超えています...😭' : `予算内で買えるのは ${fit}位 まで 🍔`;
-  }
-  if ($('remain')) {$('remain').textContent = !activeCount ? '' : totalActive <= budget ? `残り ${yen(budget - totalActive)}` : `${yen(totalActive - budget)} 超過...😭`;
-  }
-}
-
-if ($('addBtn')) {$('addBtn').addEventListener('click', () => {
-    const name = $('name').value.trim(), priceVal =$('price').value.trim();
-    if (!name) return;
-    const price = priceVal === '' ? null : parseInt(priceVal, 10);
-    items.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), name, price: (isNaN(price) || price < 0) ? null : price, url: '', pending: false });
-    $('name').value = '';$('price').value = ''; render(); save();
-  });
-}
-
-if ($('budget')) {$('budget').addEventListener('input', e => { budget = Math.max(parseInt(e.target.value, 10) || 0, 0); refresh(); save(); });
-}
-
-if ($('list')) {$('list').addEventListener('click', e => {
-    const li = e.target.closest('li'); if (!li) return;
-    const item = items.find(i => i.id === li.dataset.id); if (!item) return;
-    if (e.target.classList.contains('nm') && item.url) window.open(/^https?:\/\//i.test(item.url) ? item.url : 'https://' + item.url, '_blank');
-    if (e.target.classList.contains('pr')) {
-      const p = prompt(`「${item.name}」の価格を入力:`, item.price === null ? '' : item.price);
-      if (p !== null) { item.price = isNaN(parseInt(p,10)) ? null : parseInt(p,10); render(); save(); }
-    }
-    if (e.target.classList.contains('hold-btn')) { item.pending = !item.pending; render(); save(); }
-    if (e.target.classList.contains('url-btn')) { editingItemId = item.id; $('modalUrlInput').value = item.url \vert{}\vert{} '';$('urlModal').classList.remove('hidden'); }
-    if (e.target.classList.contains('del')) { items = items.filter(i => i.id !== item.id); render(); save(); }
-  });
-}
-
-window.closeUrlModal = () => $('urlModal').classList.add('hidden');
-window.saveUrlModal = () => {
-  const item = items.find(i => i.id === editingItemId);
-  if (item) { item.url = $('modalUrlInput').value.trim(); render(); save(); }
-  closeUrlModal();
 };
 
-window.joinRoom = function(targetId) {
-  const roomId = targetId || $('roomIdInput').value.trim(); if (!roomId) return;
-  roomHistory = [roomId, ...roomHistory.filter(id => id !== roomId)];
-  try { localStorage.setItem('roomHistory', JSON.stringify(roomHistory)); } catch (e) {}
-  updateHistoryUI();
+window.firebaseConnect = function(roomId) {
   if (unsubscribe) unsubscribe();
-  currentRoomId = roomId; $('roomIdInput').value = roomId;
-  if ($('roomStatus'))$('roomStatus').textContent = '接続中: ' + roomId;
-  const docRef = doc(db, 'rooms', currentRoomId);
+  const docRef = doc(db, 'rooms', roomId);
   unsubscribe = onSnapshot(docRef, (snapshot) => {
     if (snapshot.exists()) {
       const data = snapshot.data();
-      items = data.items || []; if (data.budget !== undefined) { budget = data.budget; $('budget').value = budget; }
-      if (data.shiftData) { shiftData = data.shiftData; updateShiftUI(); }
-    } else { setDoc(docRef, { items, budget, shiftData }); }
-    render();
+      if (data.items) items = data.items;
+      if (data.budget !== undefined) {
+        budget = data.budget;
+        if (document.getElementById('budget')) document.getElementById('budget').value = budget;
+      }
+      if (data.shiftData) {
+        shiftData = data.shiftData;
+        window.updateShiftUI();
+      }
+    } else {
+      setDoc(docRef, { items, budget, shiftData });
+    }
+    window.render();
   });
 };
-
-window.selectRoomFromHistory = val => { if (val) window.joinRoom(val); };
-
-render();
 </script>
 </body>
 </html>
